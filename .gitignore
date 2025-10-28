@@ -1,0 +1,22 @@
+# Default ignored files
+/shelf/
+
+# Datasource local storage ignored files
+/dataSources/
+/dataSources.local.xml
+
+# Byte-compiled / cache
+__pycache__/
+*.py[cod]
+
+# Virtual environments
+venv/
+.env/
+
+# Testing
+.pytest_cache/
+.coverage
+
+# IDE settings
+.idea/
+.vscode/
