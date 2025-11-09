@@ -30,15 +30,7 @@ def setup_nltk_data_dir(download_dir, resources_to_download):
 
 if __name__ == "__main__":
     # --- Default Path Calculation ---
-    # Calculate the default path based on the script's location (project_root/nltk_data)
-    # This logic assumes the script is in a subdirectory (e.g., 'scripts/') of the project root.
-    try:
-        # Get the directory of the script -> move up one level (to project root)
-        PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    except NameError:
-        # Fallback if __file__ is not defined (e.g., in an interactive interpreter)
-        PROJECT_ROOT = os.path.abspath(os.path.join(os.getcwd(), os.pardir))
-        
+    PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
     DEFAULT_NLTK_DATA_DIR = os.path.join(PROJECT_ROOT, "nltk_data")
 
     # --- Argument Parser Setup ---

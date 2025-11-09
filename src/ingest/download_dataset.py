@@ -68,7 +68,7 @@ def main():
     parser.add_argument(
         "-o", "--output-dir",
         type=str,
-        default="dataset",
+        default="datasets",
         help="Directory to save the downloaded and extracted dataset."
     )
 
