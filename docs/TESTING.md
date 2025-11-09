@@ -1,11 +1,13 @@
 # Testing Guide
 
 ## Prerequisites
+
 ```bash
 pip install -r requirements.txt
 ```
 
 ## Run All Tests
+
 ```bash
 # Run all unit tests and verify all commands work
 pytest tests/test_eval.py -v && \
@@ -16,11 +18,13 @@ python -m src.eval.stats_tests tests/data/sample_run.csv tests/data/sample_run.c
 **Note:** Robustness analysis test requires a vocabulary file and is not included in the automated test suite. Run it separately when vocab file is available.
 
 ## Unit Tests
+
 ```bash
 pytest tests/test_eval.py -v
 ```
 
 ## Compute Metrics
+
 ```bash
 python -m src.eval.compute_metrics \
     --run tests/data/sample_run.csv \
@@ -29,6 +33,7 @@ python -m src.eval.compute_metrics \
 ```
 
 ## Statistical Tests
+
 ```bash
 python -m src.eval.stats_tests \
     tests/data/sample_run.csv \
@@ -38,6 +43,7 @@ python -m src.eval.stats_tests \
 ```
 
 ## Robustness Analysis
+
 ```bash
 python -m src.eval.robustness_slices \
     --run tests/data/sample_run.csv \
