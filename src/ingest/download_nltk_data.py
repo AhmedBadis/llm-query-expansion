@@ -31,7 +31,7 @@ def setup_nltk_data_dir(download_dir, resources_to_download):
 if __name__ == "__main__":
     # --- Default Path Calculation ---
     PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-    DEFAULT_NLTK_DATA_DIR = os.path.join(PROJECT_ROOT, "nltk_data")
+    DEFAULT_NLTK_DATA_DIR = os.path.join(PROJECT_ROOT, "data", "nltk")
 
     # --- Argument Parser Setup ---
     parser = argparse.ArgumentParser(

@@ -4,7 +4,7 @@ import nltk
 # Define project root relative to this file's location (src/utils/text_utils.py)
 # This is more robust than the original __file__ logic.
 PROJECT_ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-NLTK_DATA_PATH = os.path.join(PROJECT_ROOT, "nltk_data")
+NLTK_DATA_PATH = os.path.join(PROJECT_ROOT, "data", "nltk")
 
 def setup_nltk():
     """

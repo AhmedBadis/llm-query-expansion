@@ -12,7 +12,7 @@ def load_dataset(dataset_name="scifact", data_dir=None):
                                    Defaults to 'dataset' at the project root.
     """
     if data_dir is None:
-        data_dir = os.path.join(PROJECT_ROOT, "datasets")
+        data_dir = os.path.join(PROJECT_ROOT, "data", "dataset")
         
     data_path = os.path.join(data_dir, dataset_name)
     
