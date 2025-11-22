@@ -1,9 +1,11 @@
 """
-Command-line script to compute evaluation metrics for a retrieval run.
+Command-line script and programmatic functions to compute evaluation metrics for a retrieval run.
 """
 
 import argparse
 import sys
+import pandas as pd
+from typing import Dict, List, Tuple, Optional
 from .metrics import (
     load_run_file,
     load_qrels_file,
@@ -12,6 +14,108 @@ from .metrics import (
     recall_at_k,
     mrr
 )
+
+
+def compute_all_metrics(
+    run: Dict[str, List[Tuple[str, float]]],
+    qrels: Dict[str, Dict[str, int]],
+    k: int = 10
+) -> Dict[str, float]:
+    """
+    Compute all metrics for a retrieval run (programmatic API).
+    
+    Args:
+        run: Dictionary mapping query_id to list of (doc_id, score) tuples.
+        qrels: Dictionary mapping query_id to dictionary of doc_id -> relevance label.
+        k: Cutoff rank for metrics that require it.
+    
+    Returns:
+        Dictionary with metric names as keys and scores as values.
+    """
+    return {
+        'ndcg@10': ndcg_at_k(run, qrels, k=k),
+        'map': map_at_k(run, qrels),
+        'recall@100': recall_at_k(run, qrels, k=100),
+        'mrr': mrr(run, qrels)
+    }
+
+
+def compute_metrics_from_files(
+    run_path: str,
+    qrels_path: str,
+    k: int = 10
+) -> Dict[str, float]:
+    """
+    Load run and qrels from files and compute all metrics (programmatic API).
+    
+    Args:
+        run_path: Path to retrieval run file (CSV or TREC format).
+        qrels_path: Path to qrels file.
+        k: Cutoff rank for metrics that require it.
+    
+    Returns:
+        Dictionary with metric names as keys and scores as values.
+    """
+    run = load_run_file(run_path)
+    qrels = load_qrels_file(qrels_path)
+    return compute_all_metrics(run, qrels, k)
+
+
+def save_metrics_to_csv(
+    metrics: Dict[str, float],
+    output_path: str,
+    dataset: str = "",
+    method: str = "",
+    retrieval: str = ""
+) -> None:
+    """
+    Save metrics to CSV file.
+    
+    Args:
+        metrics: Dictionary with metric names and scores.
+        output_path: Path to output CSV file.
+        dataset: Dataset name (optional, for metadata).
+        method: Method name (optional, for metadata).
+        retrieval: Retrieval method name (optional, for metadata).
+    """
+    import os
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    df = pd.DataFrame([{
+        'dataset': dataset,
+        'method': method,
+        'retrieval': retrieval,
+        **metrics
+    }])
+    df.to_csv(output_path, index=False)
+
+
+def compute_and_save_metrics(
+    run_path: str,
+    qrels_path: str,
+    output_path: str,
+    dataset: str = "",
+    method: str = "",
+    retrieval: str = "",
+    k: int = 10
+) -> Dict[str, float]:
+    """
+    Compute metrics from files and save to CSV (complete workflow).
+    
+    Args:
+        run_path: Path to retrieval run file.
+        qrels_path: Path to qrels file.
+        output_path: Path to output CSV file.
+        dataset: Dataset name.
+        method: Method name.
+        retrieval: Retrieval method name.
+        k: Cutoff rank.
+    
+    Returns:
+        Dictionary with computed metrics.
+    """
+    metrics = compute_metrics_from_files(run_path, qrels_path, k)
+    save_metrics_to_csv(metrics, output_path, dataset, method, retrieval)
+    return metrics
 
 
 def main():

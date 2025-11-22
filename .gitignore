@@ -23,5 +23,5 @@ venv/
 .vscode/
 
 # Ignored directories
-datasets/
-nltk_data/
+data/
+output/
