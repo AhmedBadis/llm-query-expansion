@@ -34,11 +34,19 @@ source .venv/Scripts/activate  # Windows (Git Bash)
 pip install -r requirements.txt
 ```
 
+## How to run?
+
+To run the pipeline using a certain method, run all cells at one of:
+- [runner/eval/baseline.ipynb](runner/eval/baseline.ipynb)
+- [runner/eval/append.ipynb](runner/eval/baseline.ipynb)
+- [runner/eval/reformulate.ipynb](runner/eval/reformulate.ipynb)
+- [runner/eval/agr.ipynb](runner/eval/agr.ipynb)
+
 ## Testing
 
-For testing commands and evaluation scripts, see [docs/TESTING.md](docs/TESTING.md).
+For testing commands and evaluation scripts, run all cells at [runner/test.ipynb](runner/test.ipynb).
 
-## Documentation
+## Documentation & Patch Notes
 
-- [docs/TESTING.md](docs/TESTING.md) - Testing and evaluation commands
-- [docs/progress_report_2.md](docs/progress_reports) - Progress reports
+- [doc/progress_report](doc/progress_report) - Progress reports
+- #TODO: Generate official documentation for all methods/files.
