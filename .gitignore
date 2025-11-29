@@ -21,6 +21,7 @@ venv/
 # IDE settings
 .idea/
 .vscode/
+.github/
 
 # Ignored directories
 data/
