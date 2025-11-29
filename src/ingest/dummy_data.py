@@ -6,11 +6,10 @@ import json
 import random
 from dataclasses import dataclass
 from pathlib import Path
-from typing import List, Optional, Sequence, Tuple
+from typing import Dict, List, Optional, Sequence, Tuple
 
 from .core import (
     IngestedDatasetPaths,
-    get_dataset_spec,
     get_ingested_dataset_paths,
     write_manifest,
     INGESTED_ROOT,
@@ -18,6 +17,51 @@ from .core import (
 
 TOKEN_RANGE_DOCS: Tuple[int, int] = (80, 140)
 TOKEN_RANGE_QUERIES: Tuple[int, int] = (5, 12)
+
+
+@dataclass(frozen=True)
+class DatasetSpec:
+    """Metadata describing a dummy dataset configuration."""
+
+    name: str
+    doc_count: int
+    query_count: int
+    qrels_per_query: int
+    vocab_size: int = 50_000
+
+
+DUMMY_DATASET_REGISTRY: Dict[str, DatasetSpec] = {
+    "trec-covid": DatasetSpec(
+        name="trec-covid",
+        doc_count=256,
+        query_count=50,
+        qrels_per_query=5,
+    ),
+    "climate-fever": DatasetSpec(
+        name="climate-fever",
+        doc_count=180,
+        query_count=36,
+        qrels_per_query=4,
+    ),
+}
+
+DEFAULT_DOWNLOAD_DATASETS: Tuple[str, ...] = tuple(DUMMY_DATASET_REGISTRY.keys())
+
+
+def get_dataset_spec(dataset: str) -> DatasetSpec:
+    normalized = dataset.lower()
+    if normalized in DUMMY_DATASET_REGISTRY:
+        return DUMMY_DATASET_REGISTRY[normalized]
+    return DatasetSpec(
+        name=normalized,
+        doc_count=128,
+        query_count=32,
+        qrels_per_query=4,
+    )
+
+
+def available_datasets() -> Sequence[DatasetSpec]:
+    return tuple(DUMMY_DATASET_REGISTRY.values())
 
 
 @dataclass(frozen=True)

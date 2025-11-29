@@ -17,17 +17,6 @@ DEFAULT_NLTK_RESOURCES: Tuple[str, ...] = ("punkt", "punkt_tab")
 
 
 @dataclass(frozen=True)
-class DatasetSpec:
-    """Metadata describing a dataset configuration."""
-
-    name: str
-    doc_count: int
-    query_count: int
-    qrels_per_query: int
-    vocab_size: int = 50_000
-
-
-@dataclass(frozen=True)
 class IngestedDatasetPaths:
     """Convenience container for all generated dataset assets."""
 
@@ -49,43 +38,6 @@ class IngestedDatasetPaths:
             "vocab": str(self.vocab),
             "manifest": str(self.manifest),
         }
-
-
-DUMMY_DATASET_REGISTRY: Dict[str, DatasetSpec] = {
-    "trec-covid": DatasetSpec(
-        name="trec-covid",
-        doc_count=256,
-        query_count=50,
-        qrels_per_query=5,
-    ),
-    "climate-fever": DatasetSpec(
-        name="climate-fever",
-        doc_count=180,
-        query_count=36,
-        qrels_per_query=4,
-    ),
-}
-
-DEFAULT_DOWNLOAD_DATASETS: Tuple[str, ...] = tuple(DUMMY_DATASET_REGISTRY.keys())
-
-
-def get_dataset_spec(dataset: str) -> DatasetSpec:
-    """Returns a spec, falling back to a generic template for unknown datasets."""
-
-    normalized = dataset.lower()
-    if normalized in DUMMY_DATASET_REGISTRY:
-        return DUMMY_DATASET_REGISTRY[normalized]
-    return DatasetSpec(
-        name=normalized,
-        doc_count=128,
-        query_count=32,
-        qrels_per_query=4,
-    )
-
-
-def available_datasets() -> Sequence[DatasetSpec]:
-    return tuple(DUMMY_DATASET_REGISTRY.values())
-
 
 def _ensure_dir(path: Path) -> bool:
     if path.exists():

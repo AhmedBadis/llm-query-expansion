@@ -4,13 +4,16 @@ from .core import (
 	DATA_ROOT,
 	INGESTED_ROOT,
 	RAW_DATASETS_ROOT,
-	available_datasets,
-	get_dataset_spec,
 	get_ingested_dataset_paths,
 	load_ingested_dataset,
 	prepare_environment,
 )
-from .dummy_data import create_ingested_DUMMY, create_ingested_dummy
+from .dummy_data import (
+	available_datasets,
+	create_ingested_DUMMY,
+	create_ingested_dummy,
+	get_dataset_spec,
+)
 from .beir_loader import load_beir_dataset
 
 __all__ = [

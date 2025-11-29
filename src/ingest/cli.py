@@ -7,13 +7,12 @@ from typing import Any, Dict, Sequence
 
 from . import __version__
 from .core import (
-    DEFAULT_DOWNLOAD_DATASETS,
     DEFAULT_NLTK_RESOURCES,
     INGESTED_ROOT,
     RAW_DATASETS_ROOT,
     prepare_environment,
 )
-from .dummy_data import create_ingested_DUMMY
+from .dummy_data import DEFAULT_DOWNLOAD_DATASETS, create_ingested_DUMMY
 from .beir_loader import download_beir_dataset, list_remote_datasets
 
 
