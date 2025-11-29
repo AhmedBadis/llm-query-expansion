@@ -1,7 +1,7 @@
 import nltk
 from rank_bm25 import BM25Okapi
 from tqdm import tqdm
-from ..utils.text_utils import setup_nltk
+from src.utils.text_utils import setup_nltk
 
 # Ensure NLTK path is set up when this module is imported
 setup_nltk()

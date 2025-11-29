@@ -36,11 +36,12 @@ pip install -r requirements.txt
 
 ## Data & Ingestion
 
-Use the ingest CLI to prepare the workspace and download datasets:
+Use the ingest CLI to prepare the workspace, download datasets, and materialize the ingested format:
 
 ```bash
-python -m src.ingest prepare       # creates folders and downloads NLTK assets
+python -m src.ingest prepare                   # creates folders and downloads NLTK assets
 python -m src.ingest download --dataset trec-covid
+python -m src.ingest ingest --dataset trec-covid
 ```
 
 Run `python -m src.ingest --help` to see all available commands.

@@ -2,8 +2,8 @@
 Script to load a BEIR dataset.
 """
 from .retrieval import run_bm25_baseline
-from ..ingest import load_dataset
-from ..utils.text_utils import setup_nltk
+from src.ingest import load_dataset
+from src.utils.text_utils import setup_nltk
 import os
 import sys
 
@@ -17,6 +17,6 @@ if __name__ == "__main__":
     # Test all datasets.
     
     setup_nltk()
-    corpus, queries, qrels = load_dataset("trec-covid")
+    corpus, queries, qrels = load_dataset("trec-covid", source="beir")
     results = run_bm25_baseline(corpus, queries, top_k=10)
     # TODO: Write results to file

@@ -9,6 +9,7 @@ from .core import (
 	prepare_environment,
 )
 from .beir_loader import load_beir_dataset
+from .materialize import ingest_beir_dataset
 
 __all__ = [
 	"DATA_ROOT",
@@ -16,6 +17,7 @@ __all__ = [
 	"INGESTED_ROOT",
 	"get_ingested_dataset_paths",
 	"load_ingested_dataset",
+	"ingest_beir_dataset",
 	"load_dataset",
 	"prepare_environment",
 ]
