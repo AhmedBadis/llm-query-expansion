@@ -34,9 +34,22 @@ source .venv/Scripts/activate  # Windows (Git Bash)
 pip install -r requirements.txt
 ```
 
+## Data & Ingestion
+
+Use the ingest CLI to prepare the workspace and materialize deterministic dummy data:
+
+```bash
+python -m src.ingest prepare          # creates folders and downloads NLTK assets
+python -m src.ingest dummy --dataset trec-covid
+python -m src.ingest dummy --dataset climate-fever
+```
+
+Run `python -m src.ingest --help` to see all available commands (including BEIR downloads).
+
 ## How to run?
 
 To run the pipeline using a certain method, run all cells at one of:
+
 - [runner/eval/baseline.ipynb](runner/eval/baseline.ipynb)
 - [runner/eval/append.ipynb](runner/eval/baseline.ipynb)
 - [runner/eval/reformulate.ipynb](runner/eval/reformulate.ipynb)

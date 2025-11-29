@@ -13,7 +13,9 @@ def tokenize(text):
     try:
         return nltk.word_tokenize(text.lower())
     except LookupError:
-        raise RuntimeError("NLTK 'punkt' resource not found. Please run 'python src/ingest/download_nltk_data.py' from the project root to download it.")
+        raise RuntimeError(
+            "NLTK 'punkt' resource not found. Please run 'python -m src.ingest prepare' from the project root to download it."
+        )
 
 def build_bm25(corpus):
     """

@@ -1,8 +1,45 @@
-"""
-Data ingestion package for loading datasets.
-"""
-# Export key functions for easy import
-from ..utils.text_utils import setup_nltk, PROJECT_ROOT, NLTK_DATA_PATH
-from .beir_loader import load_dataset
+"""High-level ingestion helpers and CLI integration."""
 
-__version__ = "0.1.0"
+from .core import (
+	DATA_ROOT,
+	INGESTED_ROOT,
+	RAW_DATASETS_ROOT,
+	available_datasets,
+	get_dataset_spec,
+	get_ingested_dataset_paths,
+	load_ingested_dataset,
+	prepare_environment,
+)
+from .dummy_data import create_ingested_DUMMY, create_ingested_dummy
+from .beir_loader import load_beir_dataset
+
+__all__ = [
+	"DATA_ROOT",
+	"RAW_DATASETS_ROOT",
+	"INGESTED_ROOT",
+	"available_datasets",
+	"get_dataset_spec",
+	"get_ingested_dataset_paths",
+	"load_ingested_dataset",
+	"create_ingested_DUMMY",
+	"create_ingested_dummy",
+	"load_dataset",
+	"prepare_environment",
+]
+
+__version__ = "0.2.0"
+
+
+def load_dataset(
+	dataset_name: str = "scifact",
+	*,
+	source: str = "beir",
+	**kwargs,
+):
+	"""Loads either a BEIR dataset or a locally ingested variant."""
+
+	if source == "beir":
+		return load_beir_dataset(dataset_name, **kwargs)
+	if source == "ingested":
+		return load_ingested_dataset(dataset_name, **kwargs)
+	raise ValueError(f"Unsupported dataset source '{source}'.")

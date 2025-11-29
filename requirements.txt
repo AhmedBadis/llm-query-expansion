@@ -18,6 +18,7 @@ rank-bm25>=0.2.2
 
 # NLP utilities
 nltk>=3.6
+requests>=2.31.0
 
 # Optional: Jupyter for notebooks
 jupyter>=1.0.0
