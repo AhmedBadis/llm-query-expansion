@@ -61,9 +61,6 @@ def build_parser() -> argparse.ArgumentParser:
     download.add_argument("--output-dir", type=Path, default=RAW_DATASETS_ROOT, help="Target download dir.")
     download.add_argument("--list", action="store_true", help="List remote BEIR datasets.")
 
-    info = subparsers.add_parser("info", help="Show ingest configuration and asset status.")
-    info.add_argument("--dataset", help="Inspect a specific dataset's ingested assets.")
-
     return parser
 
 
@@ -111,7 +108,7 @@ def handle_download(args: argparse.Namespace) -> int:
         for name in datasets:
             print(name)
         return 0
-    targets: Sequence[str]
+
     if args.dataset:
         targets = [args.dataset]
     else:
@@ -133,24 +130,6 @@ def handle_download(args: argparse.Namespace) -> int:
     return status
 
 
-def handle_info(args: argparse.Namespace) -> int:
-    if args.dataset:
-        paths = get_ingested_dataset_paths(args.dataset)
-        report = {"dataset": args.dataset, "exists": paths.root.exists()}
-        report.update({
-            "docs": paths.docs.exists(),
-            "queries": paths.queries.exists(),
-            "qrels": paths.qrels.exists(),
-            "vocab": paths.vocab.exists(),
-        })
-        _print(report, False)
-        return 0
-    for spec in available_datasets():
-        status = "available" if get_ingested_dataset_paths(spec.name).root.exists() else "missing"
-        print(f"{spec.name:15s} | {spec.description} | {status}")
-    return 0
-
-
 def main(argv: Sequence[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(args=argv)
@@ -161,7 +140,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         "prepare": handle_prepare,
         "dummy": handle_dummy,
         "download": handle_download,
-        "info": handle_info,
     }
     handler = handlers.get(args.command)
     if handler is None:

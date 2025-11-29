@@ -21,7 +21,6 @@ class DatasetSpec:
     """Metadata describing a dataset configuration."""
 
     name: str
-    description: str
     doc_count: int
     query_count: int
     qrels_per_query: int
@@ -55,14 +54,12 @@ class IngestedDatasetPaths:
 DATASET_REGISTRY: Dict[str, DatasetSpec] = {
     "trec-covid": DatasetSpec(
         name="trec-covid",
-        description="Biomedical articles curated for the TREC-COVID benchmark.",
         doc_count=256,
         query_count=50,
         qrels_per_query=5,
     ),
     "climate-fever": DatasetSpec(
         name="climate-fever",
-        description="Claims and evidence pairs focused on climate science.",
         doc_count=180,
         query_count=36,
         qrels_per_query=4,
@@ -78,7 +75,6 @@ def get_dataset_spec(dataset: str) -> DatasetSpec:
         return DATASET_REGISTRY[normalized]
     return DatasetSpec(
         name=normalized,
-        description="Custom dataset stub",
         doc_count=128,
         query_count=32,
         qrels_per_query=4,
