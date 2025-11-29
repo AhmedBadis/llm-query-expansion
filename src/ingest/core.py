@@ -51,7 +51,7 @@ class IngestedDatasetPaths:
         }
 
 
-DATASET_REGISTRY: Dict[str, DatasetSpec] = {
+DUMMY_DATASET_REGISTRY: Dict[str, DatasetSpec] = {
     "trec-covid": DatasetSpec(
         name="trec-covid",
         doc_count=256,
@@ -66,13 +66,15 @@ DATASET_REGISTRY: Dict[str, DatasetSpec] = {
     ),
 }
 
+DEFAULT_DOWNLOAD_DATASETS: Tuple[str, ...] = tuple(DUMMY_DATASET_REGISTRY.keys())
+
 
 def get_dataset_spec(dataset: str) -> DatasetSpec:
     """Returns a spec, falling back to a generic template for unknown datasets."""
 
     normalized = dataset.lower()
-    if normalized in DATASET_REGISTRY:
-        return DATASET_REGISTRY[normalized]
+    if normalized in DUMMY_DATASET_REGISTRY:
+        return DUMMY_DATASET_REGISTRY[normalized]
     return DatasetSpec(
         name=normalized,
         doc_count=128,
@@ -82,7 +84,7 @@ def get_dataset_spec(dataset: str) -> DatasetSpec:
 
 
 def available_datasets() -> Sequence[DatasetSpec]:
-    return tuple(DATASET_REGISTRY.values())
+    return tuple(DUMMY_DATASET_REGISTRY.values())
 
 
 def _ensure_dir(path: Path) -> bool:

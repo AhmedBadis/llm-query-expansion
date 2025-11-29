@@ -7,11 +7,10 @@ from typing import Any, Dict, Sequence
 
 from . import __version__
 from .core import (
+    DEFAULT_DOWNLOAD_DATASETS,
     DEFAULT_NLTK_RESOURCES,
     INGESTED_ROOT,
     RAW_DATASETS_ROOT,
-    available_datasets,
-    get_ingested_dataset_paths,
     prepare_environment,
 )
 from .dummy_data import create_ingested_DUMMY
@@ -112,11 +111,10 @@ def handle_download(args: argparse.Namespace) -> int:
     if args.dataset:
         targets = [args.dataset]
     else:
-        specs = available_datasets()
-        if not specs:
+        if not DEFAULT_DOWNLOAD_DATASETS:
             print("No datasets registered. Provide --dataset explicitly.")
             return 1
-        targets = [spec.name for spec in specs]
+        targets = list(DEFAULT_DOWNLOAD_DATASETS)
         joined = ", ".join(targets)
         print(f"No dataset specified; downloading registry datasets: {joined}")
 
