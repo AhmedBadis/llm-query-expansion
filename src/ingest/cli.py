@@ -8,12 +8,12 @@ from typing import Any, Dict, Sequence
 from . import __version__
 from .core import (
     DEFAULT_NLTK_RESOURCES,
-    INGESTED_ROOT,
     RAW_DATASETS_ROOT,
     prepare_environment,
 )
-from .dummy_data import DEFAULT_DOWNLOAD_DATASETS, create_ingested_DUMMY
 from .beir_loader import download_beir_dataset, list_remote_datasets
+
+DEFAULT_DATASETS = ("trec-covid", "climate-fever")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -35,27 +35,11 @@ def build_parser() -> argparse.ArgumentParser:
     )
     prep.add_argument("--json", action="store_true", help="Emit machine-readable output.")
 
-    dummy = subparsers.add_parser("dummy", help="Generate deterministic dummy artifacts.")
-    dummy.add_argument("--dataset", default="trec-covid", help="Target dataset name.")
-    dummy.add_argument("--docs", type=int, help="Override document count.")
-    dummy.add_argument("--queries", type=int, help="Override query count.")
-    dummy.add_argument("--qrels", type=int, help="Override qrels per query.")
-    dummy.add_argument("--vocab-size", type=int, help="Override vocab size.")
-    dummy.add_argument("--seed", type=int, default=13, help="Deterministic seed.")
-    dummy.add_argument(
-        "--output-root",
-        type=Path,
-        default=INGESTED_ROOT,
-        help="Destination directory for ingested assets.",
-    )
-    dummy.add_argument("--no-overwrite", action="store_true", help="Abort if files already exist.")
-    dummy.add_argument("--json", action="store_true", help="Emit machine-readable output.")
-
     download = subparsers.add_parser(
         "download",
-        help="Download and unzip one or more BEIR datasets. Defaults to registry if omitted.",
+        help="Download and unzip BEIR datasets (defaults to trec-covid + climate-fever).",
     )
-    download.add_argument("--dataset", default=None, help="Dataset to download. Downloads registry when omitted.")
+    download.add_argument("--dataset", help="Dataset to download. Defaults to trec-covid & climate-fever when omitted.")
     download.add_argument("--output-dir", type=Path, default=RAW_DATASETS_ROOT, help="Target download dir.")
     download.add_argument("--list", action="store_true", help="List remote BEIR datasets.")
 
@@ -80,23 +64,6 @@ def handle_prepare(args: argparse.Namespace) -> int:
     return 0
 
 
-def handle_dummy(args: argparse.Namespace) -> int:
-    paths = create_ingested_DUMMY(
-        args.dataset,
-        seed=args.seed,
-        doc_count=args.docs,
-        query_count=args.queries,
-        qrels_per_query=args.qrels,
-        vocab_size=args.vocab_size,
-        output_root=args.output_root,
-        overwrite=not args.no_overwrite,
-    )
-    payload = paths.as_dict()
-    payload.update({"status": "ok"})
-    _print(payload, args.json)
-    return 0
-
-
 def handle_download(args: argparse.Namespace) -> int:
     if args.list:
         datasets = list_remote_datasets()
@@ -107,15 +74,12 @@ def handle_download(args: argparse.Namespace) -> int:
             print(name)
         return 0
 
+    targets: Sequence[str]
     if args.dataset:
         targets = [args.dataset]
     else:
-        if not DEFAULT_DOWNLOAD_DATASETS:
-            print("No datasets registered. Provide --dataset explicitly.")
-            return 1
-        targets = list(DEFAULT_DOWNLOAD_DATASETS)
-        joined = ", ".join(targets)
-        print(f"No dataset specified; downloading registry datasets: {joined}")
+        targets = DEFAULT_DATASETS
+        print("No dataset specified; downloading defaults: trec-covid, climate-fever")
 
     status = 0
     for name in targets:
@@ -135,7 +99,6 @@ def main(argv: Sequence[str] | None = None) -> int:
         return 0
     handlers = {
         "prepare": handle_prepare,
-        "dummy": handle_dummy,
         "download": handle_download,
     }
     handler = handlers.get(args.command)

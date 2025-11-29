@@ -36,15 +36,14 @@ pip install -r requirements.txt
 
 ## Data & Ingestion
 
-Use the ingest CLI to prepare the workspace and materialize deterministic dummy data:
+Use the ingest CLI to prepare the workspace and download datasets:
 
 ```bash
-python -m src.ingest prepare          # creates folders and downloads NLTK assets
-python -m src.ingest dummy --dataset trec-covid
-python -m src.ingest dummy --dataset climate-fever
+python -m src.ingest prepare       # creates folders and downloads NLTK assets
+python -m src.ingest download --dataset trec-covid
 ```
 
-Run `python -m src.ingest --help` to see all available commands (including BEIR downloads).
+Run `python -m src.ingest --help` to see all available commands.
 
 ## How to run?
 
