@@ -15,20 +15,12 @@ def tokenize(text):
 
 def build_bm25(corpus):
     """
-    Builds the BM25 index from the corpus.
+    Builds the BM25 index from the corpus assuming tokens already exist.
     """
+
     doc_ids = list(corpus.keys())
-    tokenized_corpus = []
-    for doc_id in tqdm(doc_ids, desc="Preparing corpus tokens"):
-        doc = corpus[doc_id]
-        tokens = doc.get("tokens")
-        if isinstance(tokens, list) and tokens:
-            tokenized = [str(token) for token in tokens if str(token)]
-        else:
-            text = (doc.get("title", "") + " " + doc.get("text", "")).strip()
-            tokenized = tokenize(text)
-        tokenized_corpus.append(tokenized)
-    
+    tokenized_corpus = [corpus[doc_id]["tokens"] for doc_id in doc_ids]
+
     bm25 = BM25Okapi(tokenized_corpus)
     return bm25, doc_ids
 
