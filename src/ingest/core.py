@@ -6,10 +6,11 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Dict, Optional, Sequence, Tuple
 
+import nltk
 from nltk.downloader import Downloader
 
-from ..utils.text_utils import PROJECT_ROOT, NLTK_DATA_PATH, setup_nltk
-
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+NLTK_DATA_PATH = str(PROJECT_ROOT / "data" / "nltk")
 DATA_ROOT = Path(PROJECT_ROOT) / "data"
 RAW_DATASETS_ROOT = DATA_ROOT / "dataset"
 INGESTED_ROOT = DATA_ROOT / "ingested"
@@ -62,7 +63,7 @@ def prepare_environment(
             ("ingested", INGESTED_ROOT),
             ("nltk", Path(NLTK_DATA_PATH)),
         ):
-            created[label] = _ensure_dir(target)
+            created[label] = not _ensure_dir(target)
     nltk_report: Dict[str, str] = {}
     if ensure_nltk:
         nltk_report = ensure_nltk_resources(nltk_resources)
@@ -72,7 +73,9 @@ def prepare_environment(
 def ensure_nltk_resources(resources: Sequence[str]) -> Dict[str, str]:
     """Installs required NLTK packages inside the project data directory."""
 
-    setup_nltk()
+    if NLTK_DATA_PATH not in nltk.data.path:
+        nltk.data.path.append(NLTK_DATA_PATH)
+    Path(NLTK_DATA_PATH).mkdir(parents=True, exist_ok=True)
     downloader = Downloader(download_dir=str(NLTK_DATA_PATH))
     report: Dict[str, str] = {}
     for resource in resources:
