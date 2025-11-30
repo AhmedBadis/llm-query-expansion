@@ -4,7 +4,7 @@ import csv
 import json
 from dataclasses import dataclass
 from pathlib import Path
-from typing import Dict, Optional, Sequence, Tuple
+from typing import Any, Dict, Optional, Sequence, Tuple
 
 import nltk
 from nltk.downloader import Downloader
@@ -15,6 +15,7 @@ DATA_ROOT = Path(PROJECT_ROOT) / "data"
 RAW_DATASETS_ROOT = DATA_ROOT / "dataset"
 INGESTED_ROOT = DATA_ROOT / "ingested"
 DEFAULT_NLTK_RESOURCES: Tuple[str, ...] = ("punkt", "punkt_tab")
+DOCS_TOKENIZED_FILENAME = "docs_tokenized.jsonl"
 
 
 @dataclass(frozen=True)
@@ -28,6 +29,7 @@ class IngestedDatasetPaths:
     qrels: Path
     vocab: Path
     manifest: Path
+    docs_tokenized: Path
 
     def as_dict(self) -> Dict[str, str]:
         return {
@@ -38,6 +40,7 @@ class IngestedDatasetPaths:
             "qrels": str(self.qrels),
             "vocab": str(self.vocab),
             "manifest": str(self.manifest),
+            "docs_tokenized": str(self.docs_tokenized),
         }
 
 def _ensure_dir(path: Path) -> bool:
@@ -107,6 +110,7 @@ def get_ingested_dataset_paths(
         qrels=root / "qrels.csv",
         vocab=root / "vocab_top50k.txt",
         manifest=root / "manifest.json",
+        docs_tokenized=root / DOCS_TOKENIZED_FILENAME,
     )
 
 
@@ -122,6 +126,8 @@ def load_ingested_dataset(
     dataset: str,
     *,
     ingested_root: Optional[Path] = None,
+    load_tokenized: bool = False,
+    tokenized_filename: Optional[str] = None,
 ) -> Tuple[Dict[str, Dict[str, str]], Dict[str, str], Dict[str, Dict[str, float]]]:
     """Loads corpus, queries, and qrels from an ingested dataset."""
 
@@ -134,16 +140,28 @@ def load_ingested_dataset(
         raise FileNotFoundError(f"qrels.csv missing for dataset '{dataset}' at {paths.qrels}")
 
     corpus: Dict[str, Dict[str, str]] = {}
+    tokenized_docs: Optional[Dict[str, Dict[str, Any]]] = None
+    if load_tokenized:
+        tokenized_path = paths.root / (tokenized_filename or DOCS_TOKENIZED_FILENAME)
+        tokenized_docs = _load_tokenized_docs(tokenized_path, dataset)
+
     with paths.docs.open("r", encoding="utf-8") as handle:
         for line in handle:
             record = json.loads(line)
             doc_id = record.get("doc_id") or record.get("id")
             if not doc_id:
                 continue
-            corpus[str(doc_id)] = {
+            key = str(doc_id)
+            doc_entry = {
                 "title": record.get("title", ""),
                 "text": record.get("text", ""),
             }
+            if tokenized_docs is not None:
+                tokens_record = tokenized_docs.get(key)
+                tokens_value = tokens_record.get("text") if tokens_record else None
+                if isinstance(tokens_value, list):
+                    doc_entry["tokens"] = [str(token) for token in tokens_value if str(token)]
+            corpus[key] = doc_entry
 
     queries: Dict[str, str] = {}
     with paths.queries.open("r", encoding="utf-8") as handle:
@@ -166,3 +184,20 @@ def load_ingested_dataset(
             qrels.setdefault(str(qid), {})[str(doc_id)] = float(score_str or 1.0)
 
     return corpus, queries, qrels
+
+
+def _load_tokenized_docs(path: Path, dataset: str) -> Dict[str, Dict[str, Any]]:
+    if not path.exists():
+        raise FileNotFoundError(
+            f"Tokenized docs missing for dataset '{dataset}'. Expected file at {path}."
+        )
+
+    tokenized: Dict[str, Dict[str, Any]] = {}
+    with path.open("r", encoding="utf-8") as handle:
+        for line in handle:
+            record = json.loads(line)
+            doc_id = record.get("doc_id") or record.get("id")
+            if not doc_id:
+                continue
+            tokenized[str(doc_id)] = record
+    return tokenized

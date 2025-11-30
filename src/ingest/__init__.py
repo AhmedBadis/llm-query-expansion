@@ -2,6 +2,7 @@
 
 from .core import (
 	DATA_ROOT,
+	DOCS_TOKENIZED_FILENAME,
 	INGESTED_ROOT,
 	RAW_DATASETS_ROOT,
 	get_ingested_dataset_paths,
@@ -15,6 +16,7 @@ __all__ = [
 	"DATA_ROOT",
 	"RAW_DATASETS_ROOT",
 	"INGESTED_ROOT",
+	"DOCS_TOKENIZED_FILENAME",
 	"get_ingested_dataset_paths",
 	"load_ingested_dataset",
 	"ingest_beir_dataset",
@@ -29,6 +31,7 @@ def load_dataset(
 	dataset_name: str = "scifact",
 	*,
 	source: str = "beir",
+	load_tokenized: bool = False,
 	**kwargs,
 ):
 	"""Loads either a BEIR dataset or a locally ingested variant."""
@@ -36,5 +39,5 @@ def load_dataset(
 	if source == "beir":
 		return load_beir_dataset(dataset_name, **kwargs)
 	if source == "ingested":
-		return load_ingested_dataset(dataset_name, **kwargs)
+		return load_ingested_dataset(dataset_name, load_tokenized=load_tokenized, **kwargs)
 	raise ValueError(f"Unsupported dataset source '{source}'.")

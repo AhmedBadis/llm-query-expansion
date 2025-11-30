@@ -18,9 +18,16 @@ def build_bm25(corpus):
     Builds the BM25 index from the corpus.
     """
     doc_ids = list(corpus.keys())
-    docs = [corpus[doc_id]["title"] + " " + corpus[doc_id]["text"] for doc_id in doc_ids]
-    
-    tokenized_corpus = [tokenize(doc) for doc in tqdm(docs, desc="Tokenizing corpus")]
+    tokenized_corpus = []
+    for doc_id in tqdm(doc_ids, desc="Preparing corpus tokens"):
+        doc = corpus[doc_id]
+        tokens = doc.get("tokens")
+        if isinstance(tokens, list) and tokens:
+            tokenized = [str(token) for token in tokens if str(token)]
+        else:
+            text = (doc.get("title", "") + " " + doc.get("text", "")).strip()
+            tokenized = tokenize(text)
+        tokenized_corpus.append(tokenized)
     
     bm25 = BM25Okapi(tokenized_corpus)
     return bm25, doc_ids
