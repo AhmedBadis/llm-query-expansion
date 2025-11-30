@@ -6,6 +6,7 @@ from pathlib import Path
 from typing import Callable, Dict, List, MutableMapping, Optional, Sequence
 
 import nltk
+from tqdm import tqdm
 
 from ..ingest.core import (
     DEFAULT_NLTK_RESOURCES,
@@ -110,8 +111,9 @@ def _tokenize_with_config(config: TokenizationConfig) -> TokenizationReport:
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
     processed = 0
+    total_docs = json.loads(paths.manifest.read_text(encoding="utf-8")).get("doc_count")
     with docs_path.open("r", encoding="utf-8") as source, output_path.open("w", encoding="utf-8") as target:
-        for line in source:
+        for line in tqdm(source, desc=f"Tokenizing {config.dataset}", unit="doc", total=total_docs):
             record: MutableMapping[str, object] = json.loads(line)
             for field in config.fields:
                 if field in record:
