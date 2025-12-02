@@ -1,0 +1,15 @@
+Improve this search query in 3 steps.
+
+Query: {{query}}
+
+Respond in EXACTLY this format (3 lines only):
+ANALYSIS: [one sentence about the query's intent]
+TERMS: [5 relevant keywords separated by commas]
+REFINED: [single improved query combining original + best terms]
+
+Example for "climate change":
+ANALYSIS: User wants information about global warming and its effects.
+TERMS: global warming, greenhouse gases, carbon emissions, environmental impact, climate science
+REFINED: climate change global warming environmental impact greenhouse gas emissions
+
+Now do it for the query above:

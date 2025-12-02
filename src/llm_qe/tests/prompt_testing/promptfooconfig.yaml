@@ -1,1 +1,106 @@
-# placeholder for prompt testing
+description: "Query Expansion Prompt Testing"
+
+# Load prompts from separate files
+prompts:
+  - file://generate_only.txt
+  - file://reformulate.txt
+  - file://analyze_generate_refine.txt
+
+# Test with Groq
+providers:
+  - id: groq:llama-3.1-8b-instant
+    config:
+      apiKey: "{{env.GROQ_API_KEY}}"
+      temperature: 0.7
+      max_tokens: 100
+
+# Test cases - different query types
+tests:
+  - vars:
+      query: "information retrieval"
+    assert:
+      - type: icontains-any
+        value:
+          - search
+          - document
+          - retrieval
+          - indexing
+          - ranking
+
+  - vars:
+      query: "machine learning"
+    assert:
+      - type: icontains-any
+        value:
+          - AI
+          - neural
+          - deep learning
+          - algorithm
+          - model
+          - training
+
+  - vars:
+      query: "natural language processing"
+    assert:
+      - type: icontains-any
+        value:
+          - NLP
+          - text
+          - language
+          - semantic
+          - parsing
+          - understanding
+
+  - vars:
+      query: "covid vaccine efficacy"
+    assert:
+      - type: icontains-any
+        value:
+          - vaccine
+          - efficacy
+          - immunity
+          - clinical
+          - trial
+          - protection
+
+  - vars:
+      query: "climate change effects"
+    assert:
+      - type: icontains-any
+        value:
+          - global warming
+          - temperature
+          - environment
+          - carbon
+          - emissions
+
+  - vars:
+      query: "python"
+    assert:
+      - type: icontains-any
+        value:
+          - programming
+          - code
+          - snake
+          - language
+          - script
+
+  - vars:
+      query: "distributed database consistency"
+    assert:
+      - type: icontains-any
+        value:
+          - CAP
+          - ACID
+          - replication
+          - partition
+          - consistency
+          - availability
+
+# Default settings for all tests
+defaultTest:
+  assert:
+    - type: javascript
+      value: output.length > 10
+    - type: javascript
+      value: output.length < 500

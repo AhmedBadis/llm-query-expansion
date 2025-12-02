@@ -1,0 +1,11 @@
+Rewrite this search query using different words but same meaning.
+
+Query: {{query}}
+
+Rules:
+- Output ONLY ONE reformulated query
+- Use synonyms and alternative phrasing
+- Keep it as a single line, no lists, no bullet points
+- Do not explain, just output the new query
+
+Reformulated query:

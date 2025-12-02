@@ -1,10 +1,8 @@
 """
-Tests query expansion using GPT-2 for demonstration.
 """
+from llm_qe.expander import GroqQueryExpander, ExpansionStrategy
 
-from llm_qe.expander import LLMQueryExpander, ExpansionStrategy
-
-model_name = "gpt2"
+API_KEY = "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"
 
 queries = {
     "q1": "information retrieval",
@@ -12,22 +10,25 @@ queries = {
     "q3": "natural language processing"
 }
 
-# Loop over strategies
+# Test each strategy
 for strategy in ExpansionStrategy:
-    print(f"\n=== Testing strategy: {strategy.value} ===")
+    print(f"\n{'='*50}")
+    print(f"Testing strategy: {strategy.value}")
+    print('='*50)
     
-    expander = LLMQueryExpander(
-        model_name=model_name,
+    expander = GroqQueryExpander(
+        api_key=API_KEY,
+        model_name="llama-3.1-8b-instant",  # Fast and good
         strategy=strategy,
-        device="cpu",    
-        max_new_tokens=20,   # small for testing
+        max_tokens=50,
         temperature=0.7
     )
     
     expanded = expander.expand_queries(queries, show_progress=False)
     
-    print("\nExpanded queries:")
+    print("\nResults:")
     for qid, qtext in expanded.items():
-        print(f"{qid}: {qtext}")
-    
-    expander.cleanup()
+        original = queries[qid]
+        print(f"\n{qid}:")
+        print(f"  Original: {original}")
+        print(f"  Expanded: {qtext}")

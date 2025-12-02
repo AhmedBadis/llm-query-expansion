@@ -1,63 +1,61 @@
+"""
+Prompt templates for LLM query expansion strategies.
+"""
+
+# STRATEGY 1: GENERATE-ONLY (APPEND) - Working great, minor tweak
+GENERATE_ONLY_PROMPT = """Generate search expansion terms for this query.
+
+Query: {query}
+
+Rules:
+- Always keep the initial query. 
+- Output ONLY 5-8 relevant keywords separated by spaces
+- No explanations, no punctuation, no numbering
+- Include synonyms and related concepts
+
+Output:"""
 
 
-# STRATEGY 1: GENERATE-ONLY (APPEND)
-GENERATE_ONLY_PROMPT = """You are a search query expansion assistant. Your task is to generate additional relevant search terms that will help retrieve more relevant documents.
+# STRATEGY 2: REFORMULATE - Fixed to return single query
+REFORMULATE_PROMPT = """Rewrite this search query using different words but same meaning.
 
-Original Query: {query}
+Query: {query}
 
-Generate 3-5 additional keywords or short phrases that are:
-- Highly relevant to the original query
-- Synonyms, related concepts, or specific aspects of the topic
-- Useful for finding related documents
+Rules:
+- Output ONLY ONE reformulated query
+- Use synonyms and alternative phrasing
+- Keep it as a single line, no lists, no bullet points
+- Do not explain, just output the new query
 
-Output only the additional terms, separated by spaces. Do not include explanations or the original query.
-
-Additional Terms:"""
-
+Reformulated query:"""
 
 
-# STRATEGY 2: REFORMULATE
-REFORMULATE_PROMPT = """You are a search query reformulation assistant. Your task is to rewrite the given query in a different way that captures the same information need but uses alternative phrasing.
+# STRATEGY 3: ANALYZE-GENERATE-REFINE - Fixed format
+ANALYZE_GENERATE_REFINE_PROMPT = """Improve this search query in 3 steps.
 
-Original Query: {query}
+Query: {query}
 
-Rewrite this query using:
-- Different but equivalent terminology
-- Alternative phrasings that capture the same intent
-- More specific or descriptive language if helpful
+Respond in EXACTLY this format (3 lines only):
+ANALYSIS: [one sentence about the query's intent]
+TERMS: [5 relevant keywords separated by commas]
+REFINED: [single improved query combining original + best terms]
 
-Output only the reformulated query. Do not include explanations.
+Example for "climate change":
+ANALYSIS: User wants information about global warming and its effects.
+TERMS: global warming, greenhouse gases, carbon emissions, environmental impact, climate science
+REFINED: climate change global warming environmental impact greenhouse gas emissions
 
-Reformulated Query:"""
-
-# STRATEGY 3: ANALYZE-GENERATE-REFINE
-ANALYZE_GENERATE_REFINE_PROMPT = """You are a search query optimization assistant. Follow these steps to improve the query:
-
-Original Query: {query}
-
-Step 1 - Analysis: Identify the core information need and key concepts in 1-2 sentences.
-
-Step 2 - Generation: List 5-7 relevant terms, synonyms, or related concepts that would help retrieve relevant documents.
-
-Step 3 - Refinement: Create an improved search query that combines the original intent with the most valuable generated terms.
-
-Format your response as:
-ANALYSIS: [your analysis]
-TERMS: [term1, term2, term3, ...]
-REFINED: [final improved query]
-
-Response:"""
+Now do it for the query above:"""
 
 
 PROMPT_TEMPLATES = {
-    # 3 strategies for query expansion
     'generate_only': GENERATE_ONLY_PROMPT,
     'reformulate': REFORMULATE_PROMPT,
     'analyze_generate_refine': ANALYZE_GENERATE_REFINE_PROMPT,
 }
 
-def get_prompt_template(strategy: str) -> str:
 
+def get_prompt_template(strategy: str) -> str:
     if strategy not in PROMPT_TEMPLATES:
         available = ', '.join(PROMPT_TEMPLATES.keys())
         raise ValueError(f"Unknown strategy: {strategy}. Available: {available}")

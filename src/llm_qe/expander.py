@@ -1,22 +1,30 @@
-# expander.py
+"""
+LLM Query Expander - Supports both local models and Groq API
+"""
 from enum import Enum
 from typing import Dict, Optional
 from tqdm import tqdm
 import os
 
+# Local model imports 
 try:
     from transformers import AutoTokenizer, AutoModelForCausalLM
     import torch
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
     TRANSFORMERS_AVAILABLE = False
-    print("⚠️  transformers not installed. Run: pip install -r requirements.txt")
+
+# Groq API import 
+try:
+    from groq import Groq
+    GROQ_AVAILABLE = True
+except ImportError:
+    GROQ_AVAILABLE = False
 
 from .prompts import (
     GENERATE_ONLY_PROMPT,
     REFORMULATE_PROMPT,
     ANALYZE_GENERATE_REFINE_PROMPT,
-    get_prompt_template
 )
 
 
@@ -26,14 +34,128 @@ class ExpansionStrategy(Enum):
     ANALYZE_GENERATE_REFINE = "analyze_generate_refine"
 
 
+# =============================================================================
+# GROQ API EXPANDER (Recommended - Fast & Free)
+# =============================================================================
+
+class GroqQueryExpander:
+
+    def __init__(
+        self,
+        api_key: Optional[str] = "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",
+        model_name: str = "llama-3.1-8b-instant",
+        strategy: ExpansionStrategy = ExpansionStrategy.GENERATE_ONLY,
+        max_tokens: int = 50,
+        temperature: float = 0.7,
+    ):
+        if not GROQ_AVAILABLE:
+            raise ImportError("groq library required. Install with: pip install groq")
+        
+        # Use provided key or environment variable
+        self.api_key = api_key or os.getenv("GROQ_API_KEY")
+        if not self.api_key:
+            raise ValueError("API key required. Pass api_key or set GROQ_API_KEY env var")
+        
+        self.client = Groq(api_key=self.api_key)
+        self.model_name = model_name
+        self.strategy = strategy
+        self.max_tokens = max_tokens
+        self.temperature = temperature
+        
+        # Set prompt template based on strategy
+        self.prompt_template = self._get_default_prompt()
+        
+        print(f"Strategy: {strategy.value}")
+    
+    def _get_default_prompt(self) -> str:
+        if self.strategy == ExpansionStrategy.GENERATE_ONLY:
+            return GENERATE_ONLY_PROMPT
+        elif self.strategy == ExpansionStrategy.REFORMULATE:
+            return REFORMULATE_PROMPT
+        elif self.strategy == ExpansionStrategy.ANALYZE_GENERATE_REFINE:
+            return ANALYZE_GENERATE_REFINE_PROMPT
+        else:
+            raise ValueError(f"Unknown strategy: {self.strategy}")
+    
+    def _generate_response(self, prompt: str) -> str:
+        response = self.client.chat.completions.create(
+            model=self.model_name,
+            messages=[{"role": "user", "content": prompt}],
+            max_tokens=self.max_tokens,
+            temperature=self.temperature,
+        )
+        return response.choices[0].message.content.strip()
+    
+    def _extract_refined_query(self, response: str) -> str:
+        # Look for "REFINED:" marker
+        if "REFINED:" in response:
+            refined = response.split("REFINED:")[-1].strip()
+            refined = refined.split('\n')[0].strip()
+            return refined
+        
+        # Fallback: return the last non-empty line
+        lines = [line.strip() for line in response.split('\n') if line.strip()]
+        if lines:
+            return lines[-1]
+        
+        return response.strip()
+    
+    def expand_query(self, query: str) -> str:
+        prompt = self.prompt_template.format(query=query)
+        response = self._generate_response(prompt)
+        
+        if self.strategy == ExpansionStrategy.GENERATE_ONLY:
+            return f"{query} {response}".strip()
+        
+        elif self.strategy == ExpansionStrategy.REFORMULATE:
+            return response
+        
+        elif self.strategy == ExpansionStrategy.ANALYZE_GENERATE_REFINE:
+            return self._extract_refined_query(response)
+        
+        else:
+            raise ValueError(f"Unknown strategy: {self.strategy}")
+    
+    def expand_queries(
+        self,
+        queries: Dict[str, str],
+        show_progress: bool = True
+    ) -> Dict[str, str]:
+        expanded_queries = {}
+        
+        iterator = tqdm(queries.items(), desc="Expanding queries") if show_progress else queries.items()
+        
+        for qid, query_text in iterator:
+            try:
+                expanded = self.expand_query(query_text)
+                expanded_queries[qid] = expanded
+            except Exception as e:
+                print(f"❌ Error expanding query {qid}: {e}")
+                expanded_queries[qid] = query_text
+        
+        return expanded_queries
+    
+    def cleanup(self):
+        """No cleanup needed for API client"""
+        pass
+
+
+# =============================================================================
+# LOCAL MODEL EXPANDER (Original - Requires GPU/CPU)
+# =============================================================================
+
 class LLMQueryExpander:
+    """
+    Query expander using local HuggingFace models.
+    Requires transformers and torch installed.
+    """
    
     def __init__(
         self,
-        model_name: str = "TheBloke/guanaco-3B-HF",  # smaller model for local GPU
+        model_name: str = "microsoft/Phi-3-mini-4k-instruct",
         strategy: ExpansionStrategy = ExpansionStrategy.GENERATE_ONLY,
         device: str = "auto",
-        max_new_tokens: int = 50,       # reduced for memory efficiency
+        max_new_tokens: int = 50,
         temperature: float = 0.7,
         custom_prompt: Optional[str] = None,
         cache_dir: Optional[str] = None
@@ -41,7 +163,7 @@ class LLMQueryExpander:
         if not TRANSFORMERS_AVAILABLE:
             raise ImportError(
                 "transformers library required. "
-                "Install with: pip install -r requirements.txt"
+                "Install with: pip install transformers torch"
             )
         
         self.model_name = model_name
@@ -109,7 +231,6 @@ class LLMQueryExpander:
                 pad_token_id=self.tokenizer.eos_token_id
             )
         
-        # Decode only the new tokens (exclude the prompt)
         generated_text = self.tokenizer.decode(
             outputs[0][inputs.input_ids.shape[1]:],
             skip_special_tokens=True
@@ -118,14 +239,11 @@ class LLMQueryExpander:
         return generated_text.strip()
     
     def _extract_refined_query(self, response: str) -> str:
-        # Look for "REFINED:" marker
         if "REFINED:" in response:
             refined = response.split("REFINED:")[-1].strip()
-            # Take only the first line after REFINED:
             refined = refined.split('\n')[0].strip()
             return refined
         
-        # Fallback: return the last non-empty line
         lines = [line.strip() for line in response.split('\n') if line.strip()]
         if lines:
             return lines[-1]
@@ -133,26 +251,17 @@ class LLMQueryExpander:
         return response.strip()
     
     def expand_query(self, query: str) -> str:
-        # Format the prompt
         prompt = self.prompt_template.format(query=query)
-        
-        # Generate response
         response = self._generate_response(prompt)
         
-        # Process based on strategy
         if self.strategy == ExpansionStrategy.GENERATE_ONLY:
-            # Append generated terms to original query
-            expanded = f"{query} {response}"
-            return expanded.strip()
+            return f"{query} {response}".strip()
         
         elif self.strategy == ExpansionStrategy.REFORMULATE:
-            # Use the reformulated query directly
             return response
         
         elif self.strategy == ExpansionStrategy.ANALYZE_GENERATE_REFINE:
-            # Extract the refined query from structured response
-            refined = self._extract_refined_query(response)
-            return refined
+            return self._extract_refined_query(response)
         
         else:
             raise ValueError(f"Unknown strategy: {self.strategy}")
@@ -172,7 +281,6 @@ class LLMQueryExpander:
                 expanded_queries[qid] = expanded
             except Exception as e:
                 print(f"❌ Error expanding query {qid}: {e}")
-                # Fallback to original query on error
                 expanded_queries[qid] = query_text
         
         return expanded_queries
@@ -186,16 +294,39 @@ class LLMQueryExpander:
             torch.cuda.empty_cache()
 
 
-def expand_queries(
+# =============================================================================
+# CONVENIENCE FUNCTIONS
+# =============================================================================
+
+def expand_queries_groq(
     queries: Dict[str, str],
-    model_name: str = "TheBloke/guanaco-3B-HF",  # smaller default model
+    api_key: Optional[str] = None,
+    model_name: str = "llama-3.1-8b-instant",
     strategy: str = "generate_only",
     **kwargs
 ) -> Dict[str, str]:
-    # Convert strategy string to enum
+    """Convenience function for Groq API expansion"""
     strategy_enum = ExpansionStrategy(strategy)
     
-    # Create expander
+    expander = GroqQueryExpander(
+        api_key=api_key,
+        model_name=model_name,
+        strategy=strategy_enum,
+        **kwargs
+    )
+    
+    return expander.expand_queries(queries)
+
+
+def expand_queries(
+    queries: Dict[str, str],
+    model_name: str = "microsoft/Phi-3-mini-4k-instruct",
+    strategy: str = "generate_only",
+    **kwargs
+) -> Dict[str, str]:
+    """Convenience function for local model expansion"""
+    strategy_enum = ExpansionStrategy(strategy)
+    
     expander = LLMQueryExpander(
         model_name=model_name,
         strategy=strategy_enum,
@@ -203,9 +334,7 @@ def expand_queries(
     )
     
     try:
-        # Expand queries
         expanded = expander.expand_queries(queries)
         return expanded
     finally:
-        # Clean up
         expander.cleanup()

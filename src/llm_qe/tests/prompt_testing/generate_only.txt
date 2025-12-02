@@ -1,0 +1,10 @@
+Generate search expansion terms for this query.
+
+Query: {{query}}
+
+Rules:
+- Output ONLY 5-8 relevant keywords separated by spaces
+- No explanations, no punctuation, no numbering
+- Include synonyms and related concepts
+
+Output:
