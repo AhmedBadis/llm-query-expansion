@@ -14,8 +14,10 @@ import re
 import csv
 import json
 from collections import Counter
+from pathlib import Path
 import numpy as np
-from .metrics import load_run_file
+import pandas as pd
+from .metrics import load_run_file, load_qrels_file
 
 
 def load_vocabulary(vocab_file: str, top_n: int = 50000) -> Set[str]:
@@ -345,14 +347,109 @@ def compute_query_slices(
     
     # Save to file if requested
     if output_file:
-        save_slices(slices, output_file)
+        save_slices_dict(slices, output_file)
     
     return slices
 
 
-def save_slices(slices: Dict[str, Dict], output_file: str):
+def label_queries(
+    dataset: str,
+    run_df: pd.DataFrame,
+    qrels_df: pd.DataFrame,
+    vocab_path: str,
+    vocab_overlap_threshold: float = 0.6,
+    oov_threshold: float = 0.3,
+    doc_overlap_threshold: float = 0.2
+) -> pd.DataFrame:
     """
-    Save query slices to a CSV file.
+    Label queries as familiar/unfamiliar using heuristics.
+    
+    Args:
+        dataset: Dataset name (for path resolution).
+        run_df: DataFrame with columns ['qid', 'docid', 'score'] (baseline run).
+        qrels_df: DataFrame with columns ['query_id', 'doc_id', 'score'] (qrels).
+        vocab_path: Path to vocabulary file.
+        vocab_overlap_threshold: Threshold for vocab overlap (default 0.6).
+        oov_threshold: Threshold for OOV ratio (default 0.3).
+        doc_overlap_threshold: Threshold for doc overlap (default 0.2).
+    
+    Returns:
+        DataFrame with columns: qid, query_text, label, vocab_overlap, oov_ratio, 
+        doc_overlap, has_numeric_ids, has_chemical_names, has_uncommon_acronyms.
+    """
+    # Load vocabulary
+    vocab = load_vocabulary(vocab_path)
+    
+    # Convert run_df to dict format: {qid: [(docid, score), ...]}
+    run_dict = {}
+    for qid in run_df['qid'].unique():
+        q_run = run_df[run_df['qid'] == qid]
+        run_dict[qid] = [(row['docid'], row['score']) for _, row in q_run.iterrows()]
+    
+    # Load queries from ingest outputs (we need query texts)
+    from src.ingest.core import INGESTED_ROOT, get_ingested_dataset_paths
+    paths = get_ingested_dataset_paths(dataset, ingested_root=INGESTED_ROOT)
+    queries_df = pd.read_csv(paths.queries)
+    queries = {row['query_id']: row['text'] for _, row in queries_df.iterrows()}
+    
+    # Process each query using label_query_familiarity
+    rows = []
+    for qid, query_text in queries.items():
+        if qid not in run_dict:
+            continue
+        
+        query_tokens = extract_tokens(query_text)
+        retrieved_docs = run_dict[qid]
+        
+        label, features = label_query_familiarity(
+            query_text,
+            query_tokens,
+            vocab,
+            retrieved_docs,
+            corpus=None,  # We don't have corpus loaded here
+            vocab_overlap_threshold=vocab_overlap_threshold,
+            oov_threshold=oov_threshold,
+            doc_overlap_threshold=doc_overlap_threshold
+        )
+        
+        rows.append({
+            'qid': qid,
+            'query_text': query_text,
+            'label': label,
+            'vocab_overlap': features['vocab_overlap'],
+            'oov_ratio': features['oov_ratio'],
+            'doc_overlap': features['doc_overlap'],
+            'has_numeric_ids': int(features['has_numeric_ids']),
+            'has_chemical_names': int(features['has_chemical_names']),
+            'has_uncommon_acronyms': int(features['has_uncommon_acronyms'])
+        })
+    
+    return pd.DataFrame(rows)
+
+
+def save_slices(dataset: str, slices_df: pd.DataFrame, out_csv_path: Optional[str] = None):
+    """
+    Save query slices to output/eval/slice/{dataset}.csv.
+    
+    Args:
+        dataset: Dataset name.
+        slices_df: DataFrame to save with columns: qid, query_text, label, vocab_overlap, oov_ratio, 
+                   doc_overlap, has_numeric_ids, has_chemical_names, has_uncommon_acronyms.
+        out_csv_path: Optional full path to output CSV file. If None, defaults to output/eval/slice/{dataset}.csv.
+    """
+    from pathlib import Path
+    from src.ingest.core import PROJECT_ROOT
+    
+    if out_csv_path is None:
+        out_csv_path = str(PROJECT_ROOT / "output" / "eval" / "slice" / f"{dataset}.csv")
+    
+    Path(out_csv_path).parent.mkdir(parents=True, exist_ok=True)
+    slices_df.to_csv(out_csv_path, index=False)
+
+
+def save_slices_dict(slices: Dict[str, Dict], output_file: str):
+    """
+    Save query slices to a CSV file (legacy function for dict format).
     
     Args:
         slices: Dictionary mapping query_id to slice information.

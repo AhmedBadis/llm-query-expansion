@@ -46,10 +46,10 @@
 ### Output Structure
 
 All notebooks follow exact output layout (DUMMY will be removed once real data is provided):
-- Metrics: `output/eval/metric/{method}/metric_{retrieval}_{dataset}*.csv`
+- Metrics: `output/eval/metric/{method}/{retrieval}_{dataset}*.csv`
 - Summary: `output/eval/metric/{method}/summary_DUMMY.csv`
-- Plots: `output/eval/plot/plot_{method}_ndcg_DUMMY.png`
-- Slices: `output/eval/slice/slice_{dataset}_DUMMY.csv`
+- Plots: `output/eval/plot/{method}_ndcg_DUMMY.png`
+- Slices: `output/eval/slice/{dataset}_DUMMY.csv`
 
 ### Key Features
 

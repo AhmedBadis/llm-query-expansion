@@ -26,3 +26,6 @@ venv/
 # Ignored directories
 data/
 output/
+
+# API keys (never commit)
+src/llm_qe/api_key.txt

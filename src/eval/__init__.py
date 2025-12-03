@@ -19,14 +19,16 @@ from .stats_tests import (
     paired_t_test,
     bootstrap_ci,
     compare_runs,
-    compute_per_query_metric
+    compute_per_query_metric,
+    compute_paired_bootstrap_ci
 )
 from .robustness_slices import (
     compute_query_slices,
     label_query_familiarity,
     load_vocabulary,
     save_slices,
-    load_slices
+    load_slices,
+    label_queries
 )
 from . import utils
 
@@ -45,11 +47,13 @@ __all__ = [
     'bootstrap_ci',
     'compare_runs',
     'compute_per_query_metric',
+    'compute_paired_bootstrap_ci',
     'compute_query_slices',
     'label_query_familiarity',
     'load_vocabulary',
     'save_slices',
     'load_slices',
+    'label_queries',
     'utils'
 ]
 

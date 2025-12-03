@@ -7,6 +7,7 @@ including paired t-tests and bootstrap confidence intervals.
 
 from typing import Dict, List, Tuple, Optional
 import numpy as np
+import pandas as pd
 from scipy import stats
 from .metrics import ndcg_at_k, load_run_file, load_qrels_file
 
@@ -168,6 +169,92 @@ def bootstrap_ci(
     mean_difference = np.mean(differences)
     
     return mean_difference, lower_bound, upper_bound
+
+
+def compute_paired_bootstrap_ci(
+    runA_df: pd.DataFrame,
+    runB_df: pd.DataFrame,
+    qrels_df: pd.DataFrame,
+    metric: str = 'ndcg',
+    k: int = 10,
+    num_samples: int = 1000,
+    seed: Optional[int] = None,
+    confidence: float = 0.95
+) -> Dict[str, float]:
+    """
+    Compute paired bootstrap confidence intervals and p-value for two retrieval runs.
+    
+    Args:
+        runA_df: DataFrame with columns ['qid', 'docid', 'score'] for baseline run.
+        runB_df: DataFrame with columns ['qid', 'docid', 'score'] for system run.
+        qrels_df: DataFrame with columns ['query_id', 'doc_id', 'score'] (qrels).
+        metric: Metric name ('ndcg', 'map', 'recall', 'mrr'). Default 'ndcg'.
+        k: Cutoff rank for metrics that require it. Default 10.
+        num_samples: Number of bootstrap samples. Default 1000.
+        seed: Random seed for reproducibility. Default None.
+        confidence: Confidence level (e.g., 0.95 for 95% CI). Default 0.95.
+    
+    Returns:
+        Dictionary with keys: 'mean_difference', 'ci_lower', 'ci_upper', 'p_value'.
+    """
+    if seed is not None:
+        np.random.seed(seed)
+    
+    # Convert DataFrames to dict format expected by existing functions
+    runA_dict = {}
+    for qid in runA_df['qid'].unique():
+        q_run = runA_df[runA_df['qid'] == qid]
+        runA_dict[qid] = [(row['docid'], row['score']) for _, row in q_run.iterrows()]
+    
+    runB_dict = {}
+    for qid in runB_df['qid'].unique():
+        q_run = runB_df[runB_df['qid'] == qid]
+        runB_dict[qid] = [(row['docid'], row['score']) for _, row in q_run.iterrows()]
+    
+    # Convert qrels DataFrame to dict format
+    qrels_dict = {}
+    for _, row in qrels_df.iterrows():
+        qid = row['query_id']
+        docid = row['doc_id']
+        score = int(row['score'])
+        if qid not in qrels_dict:
+            qrels_dict[qid] = {}
+        qrels_dict[qid][docid] = score
+    
+    # Normalize metric name (handle 'ndcg' vs 'ndcg@10')
+    metric_name = metric
+    if metric == 'ndcg':
+        metric_name = 'ndcg@10'
+    elif metric == 'recall':
+        metric_name = 'recall@100'
+    
+    # Use existing bootstrap_ci function
+    mean_diff, ci_lower, ci_upper = bootstrap_ci(
+        runA_dict,
+        runB_dict,
+        qrels_dict,
+        metric=metric_name,
+        k=k,
+        n_bootstrap=num_samples,
+        confidence=confidence
+    )
+    
+    # Compute p-value using paired t-test
+    t_stat, p_value, _ = paired_t_test(
+        runA_dict,
+        runB_dict,
+        qrels_dict,
+        metric=metric_name,
+        k=k
+    )
+    
+    return {
+        'mean_difference': mean_diff,
+        'ci_lower': ci_lower,
+        'ci_upper': ci_upper,
+        'p_value': p_value,
+        'confidence_level': confidence
+    }
 
 
 def compare_runs(

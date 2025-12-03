@@ -29,7 +29,7 @@ from .prompts import (
 
 
 class ExpansionStrategy(Enum):
-    GENERATE_ONLY = "generate_only"
+    GENERATE_ONLY = "generate_only" # TODO: rename to GENERATE_ONLY to APPEND across all files
     REFORMULATE = "reformulate"
     ANALYZE_GENERATE_REFINE = "analyze_generate_refine"
 
@@ -51,10 +51,16 @@ class GroqQueryExpander:
         if not GROQ_AVAILABLE:
             raise ImportError("groq library required. Install with: pip install groq")
         
-        # Use provided key or environment variable only (no hardcoded defaults)
-        self.api_key = api_key or os.getenv("GROQ_API_KEY")
+        # Try to get API key from: 1) parameter, 2) api_key.txt file
+        self.api_key = api_key
         if not self.api_key:
-            raise ValueError("API key required. Pass api_key or set GROQ_API_KEY env var")
+            # Try reading from api_key.txt file (git-ignored)
+            api_key_path = os.path.join(os.path.dirname(__file__), "api_key.txt")
+            if os.path.exists(api_key_path):
+                with open(api_key_path, "r", encoding="utf-8") as f:
+                    self.api_key = f.read().strip()
+        if not self.api_key:
+            raise ValueError("API key required. Pass api_key or create src/llm_qe/api_key.txt")
         
         self.client = Groq(api_key=self.api_key)
         self.model_name = model_name
