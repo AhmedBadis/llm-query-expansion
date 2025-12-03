@@ -15,7 +15,8 @@ from .core import (
 from .beir_loader import download_beir_dataset, list_remote_datasets
 from .materialize import ingest_beir_dataset
 
-DEFAULT_DATASETS = ("trec-covid", "climate-fever")
+# Canonical dataset identifiers use underscores internally.
+DEFAULT_DATASETS = ("trec_covid", "climate_fever")
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -39,9 +40,15 @@ def build_parser() -> argparse.ArgumentParser:
 
     download = subparsers.add_parser(
         "download",
-        help="Download and unzip BEIR datasets (defaults to trec-covid + climate-fever).",
+        help="Download and unzip BEIR datasets (defaults to trec_covid + climate_fever).",
     )
-    download.add_argument("--dataset", help="Dataset to download. Defaults to trec-covid & climate-fever when omitted.")
+    download.add_argument(
+        "--dataset",
+        help=(
+            "Dataset to download. Defaults to trec_covid & climate_fever when omitted. "
+            "Use underscored names; these are mapped to BEIR's hyphenated identifiers internally."
+        ),
+    )
     download.add_argument("--output-dir", type=Path, default=RAW_DATASETS_ROOT, help="Target download dir.")
     download.add_argument("--list", action="store_true", help="List remote BEIR datasets.")
 
@@ -52,7 +59,7 @@ def build_parser() -> argparse.ArgumentParser:
     ingest.add_argument(
         "--dataset",
         action="append",
-        help="Dataset to ingest (repeat for multiple). Defaults to trec-covid & climate-fever when omitted.",
+        help="Dataset to ingest (repeat for multiple). Defaults to trec_covid & climate_fever when omitted.",
     )
     ingest.add_argument("--split", default="test", help="BEIR split to load (default: test).")
     ingest.add_argument("--vocab-size", type=int, default=50_000, help="Maximum vocabulary size.")
@@ -107,7 +114,7 @@ def handle_download(args: argparse.Namespace) -> int:
         targets = [args.dataset]
     else:
         targets = DEFAULT_DATASETS
-        print("No dataset specified; downloading defaults: trec-covid, climate-fever")
+        print("No dataset specified; downloading defaults: trec_covid, climate_fever")
 
     status = 0
     for name in targets:

@@ -1,8 +1,6 @@
 # Progress Report 3
 
-## Ahmed Badis Lakrach - Evaluation Lead
-
-**Completed:**
+## Ahmed Badis Lakrach - Evaluation
 
 ### Evaluation Infrastructure (Programmatic API)
 
@@ -64,19 +62,20 @@ All notebooks follow exact output layout (DUMMY will be removed once real data i
 
 ---
 
-## [Person A - Kallel]
+## [Kallel]
 
 _Add your progress here_
 
 ---
 
-## [Person B - Baffoun]
+## [Baffoun]
 
 _Add your progress here_
 
 ---
 
-## [Person D - Berktug]
+## [Berktug]
 
 _Add your progress here_
+
 

@@ -40,8 +40,8 @@ Use the ingest CLI to prepare the workspace, download datasets, and materialize 
 
 ```bash
 python -m src.ingest prepare                   # creates folders and downloads NLTK assets
-python -m src.ingest download --dataset trec-covid
-python -m src.ingest ingest --dataset trec-covid
+python -m src.ingest download --dataset trec_covid
+python -m src.ingest ingest --dataset trec_covid
 ```
 
 Run `python -m src.ingest --help` to see all available commands.

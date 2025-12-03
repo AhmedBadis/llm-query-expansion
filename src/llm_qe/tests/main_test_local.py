@@ -1,8 +1,14 @@
+"""Local smoke test for GroqQueryExpander (no real credentials in code).
+
+This file is intended for manual/local use only and should NOT be run in CI.
+It requires a valid GROQ_API_KEY environment variable.
 """
-"""
+import os
 from llm_qe.expander import GroqQueryExpander, ExpansionStrategy
 
-API_KEY = "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"
+API_KEY = os.getenv("GROQ_API_KEY")
+if not API_KEY:
+    raise RuntimeError("GROQ_API_KEY environment variable is required for this local test.")
 
 queries = {
     "q1": "information retrieval",

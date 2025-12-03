@@ -17,7 +17,7 @@ set_nltk_path()
 
 if __name__ == "__main__":
     # Test all datasets.
-    DATASET = "trec-covid"
+    DATASET = "trec_covid"
     corpus, queries, qrels = load_dataset(DATASET, source="ingested", load_tokenized=True)
     results = run_bm25_baseline(corpus, queries, top_k=10)
     # TODO: Write results to file

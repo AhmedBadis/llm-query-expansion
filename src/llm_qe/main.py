@@ -85,7 +85,7 @@ def save_baseline_queries(dataset_name, output_dir):
 
 def main():
     parser = argparse.ArgumentParser(description="LLM query expansion")
-    parser.add_argument("--dataset", type=str, default="trec-covid")
+    parser.add_argument("--dataset", type=str, default="trec_covid")
     parser.add_argument("--model", type=str, default="mistralai/Mistral-7B-Instruct-v0.2")
     parser.add_argument("--strategy", type=str, choices=["generate_only", "reformulate", "analyze_generate_refine"], default="generate_only")
     parser.add_argument("--output-dir", type=str, default="./expanded_queries")

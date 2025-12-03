@@ -15,11 +15,24 @@ def tokenize(text):
 
 def build_bm25(corpus):
     """
-    Builds the BM25 index from the corpus assuming tokens already exist.
+    Builds the BM25 index from the corpus.
+
+    If pre-tokenized text is available under the ``\"tokens\"`` key for each
+    document, it is used directly. Otherwise, this function will tokenize the
+    concatenation of ``title`` and ``text`` fields using NLTK.
     """
 
     doc_ids = list(corpus.keys())
-    tokenized_corpus = [corpus[doc_id]["tokens"] for doc_id in doc_ids]
+    tokenized_corpus = []
+    for doc_id in doc_ids:
+        payload = corpus[doc_id]
+        tokens = payload.get("tokens")
+        if isinstance(tokens, list) and tokens:
+            tokenized_corpus.append(tokens)
+        else:
+            # Fallback to tokenizing raw text if no precomputed tokens exist
+            text = f"{payload.get('title', '')} {payload.get('text', '')}".strip()
+            tokenized_corpus.append(tokenize(text))
 
     bm25 = BM25Okapi(tokenized_corpus)
     return bm25, doc_ids

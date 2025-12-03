@@ -168,4 +168,3 @@ def find_top_delta_queries(
     top_negative = sorted_deltas[-top_n:] if len(sorted_deltas) >= top_n else sorted_deltas[::-1]
     
     return top_positive, top_negative
-

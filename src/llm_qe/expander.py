@@ -42,7 +42,7 @@ class GroqQueryExpander:
 
     def __init__(
         self,
-        api_key: Optional[str] = "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",
+        api_key: Optional[str] = None,
         model_name: str = "llama-3.1-8b-instant",
         strategy: ExpansionStrategy = ExpansionStrategy.GENERATE_ONLY,
         max_tokens: int = 50,
@@ -51,7 +51,7 @@ class GroqQueryExpander:
         if not GROQ_AVAILABLE:
             raise ImportError("groq library required. Install with: pip install groq")
         
-        # Use provided key or environment variable
+        # Use provided key or environment variable only (no hardcoded defaults)
         self.api_key = api_key or os.getenv("GROQ_API_KEY")
         if not self.api_key:
             raise ValueError("API key required. Pass api_key or set GROQ_API_KEY env var")
