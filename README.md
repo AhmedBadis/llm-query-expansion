@@ -21,7 +21,7 @@ cd domain-specific-query-expansion-with-llms
 ```bash
 # Create
 python3 -m venv .venv  # Linux/macOS
-python -m venv .venv   # Windows
+python -m venv .venv   # Windows (Git Bash)
 
 # Activate
 source .venv/bin/activate  # Linux/macOS
@@ -58,6 +58,12 @@ To run the pipeline using a certain method, run all cells at one of:
 ## Testing
 
 For testing commands and evaluation scripts, run all cells at [runner/test.ipynb](runner/test.ipynb).
+
+### Deactivate virtual environment
+
+```bash
+deactivate  # Linux/macOS & Windows (Git Bash)
+```
 
 ## Documentation & Patch Notes
 
