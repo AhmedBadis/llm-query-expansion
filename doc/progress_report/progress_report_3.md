@@ -18,27 +18,27 @@
 
 ### Notebook-Based Evaluation Workflow
 
-- **runner/eval/baseline.ipynb**: Complete baseline evaluation notebook:
+- **notebook/eval/baseline.ipynb**: Complete baseline evaluation notebook:
   - Computes metrics for BM25 × TREC-COVID, BM25 × Climate-Fever, TF-IDF × TREC-COVID, TF-IDF × Climate-Fever
   - Creates DUMMY files automatically if missing
   - Generates summary tables and nDCG@10 plots
   - Runs robustness analysis (query slices)
 
-- **runner/eval/append.ipynb**: Append method evaluation notebook:
+- **notebook/eval/append.ipynb**: Append method evaluation notebook:
   - Evaluates all 4 retrieval×dataset combinations
   - Statistical comparison with baseline (paired t-test, bootstrap CI)
   - Top-10 positive and negative delta queries analysis
   - Summary tables and comparison plots
 
-- **runner/eval/reformulate.ipynb**: Reformulate method evaluation notebook:
+- **notebook/eval/reformulate.ipynb**: Reformulate method evaluation notebook:
   - Same structure as append notebook for reformulate method
   - Complete metrics computation and baseline comparison
 
-- **runner/eval/agr.ipynb**: AGR (Analyze-Generate-Refine) method evaluation notebook:
+- **notebook/eval/agr.ipynb**: AGR (Analyze-Generate-Refine) method evaluation notebook:
   - Same structure as append/reformulate notebooks
   - Full evaluation pipeline for AGR method
 
-- **runner/eval/test.ipynb**: Comprehensive test notebook:
+- **notebook/eval/test.ipynb**: Comprehensive test notebook:
   - Tests all evaluation functions (metrics, statistical tests, robustness analysis)
   - End-to-end workflow verification
   - Replaces CLI-based testing with notebook-based tests

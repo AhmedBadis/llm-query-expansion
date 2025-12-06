@@ -27,7 +27,7 @@
 - Updated extraction logic in `src/ingest/beir_loader.py` and `src/ingest/materialize.py` accordingly
 
 **6. Baseline notebook: use ingest outputs and remove DUMMY support**
-- Modified `runner/eval/baseline.ipynb` to import `ensure_baseline_runs` and call it when baseline files are missing
+- Modified `notebook/eval/baseline.ipynb` to import `ensure_baseline_runs` and call it when baseline files are missing
 - Removed automatic `_DUMMY` generation logic for baseline runs
 - Notebook now reads ingest outputs from `output/ingest/{dataset}`
 
@@ -65,7 +65,7 @@
   - Unit tests for robustness slicing heuristics (synthetic data)
   - Bootstrap CI function tests (simple runs with known expectations)
   - `baseline_exists()` behavior tests using mocks
-- Tests are runnable from `runner/test.ipynb` (no CLI pytest required)
+- Tests are runnable from `notebook/test.ipynb` (no CLI pytest required)
 
 **14. Save p-values/CIs from notebooks**
 - Added notebook cells in `append.ipynb`, `reformulate.ipynb`, and `agr.ipynb` that call `compare_runs()` and save results
