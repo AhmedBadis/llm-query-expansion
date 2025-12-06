@@ -2,87 +2,104 @@
 
 ## Ahmed Badis Lakrach - Evaluation
 
-### Completed Tasks (1-15)
+# Progress Report — Ingest, Notebooks, Evaluation, and Misc Fixes
 
-**1. Programmatic ingest API**
-- Created `src/ingest/api.py` with `prepare()`, `download(dataset_name)`, and `ingest(dataset_name)` functions
-- All functions materialize outputs to `output/ingest/{dataset}` (docs.jsonl, manifest.jsonl, qrels.csv, queries.csv, vocab_top50k.txt)
+## Completed Tasks (1–23)
 
-**2. Notebook-runner helper API**
-- Created `src/notebook/run_api.py` with `run_baseline()`, `baseline_exists()`, `ensure_baseline_runs()`, and `run_method(method_name)` stubs
-- Functions orchestrate ingestion, indexing, retrieval, return clear booleans, and print informative messages
+1. **Added programmatic ingest API**  
+   - Added `src/ingest/api.py` with `prepare()`, `download(dataset_name)`, and `ingest(dataset_name)`.  
+   - All functions materialize outputs to `output/ingest/{dataset}`: `docs.jsonl`, `manifest.jsonl`, `qrels.csv`, `queries.csv`, `vocab_top50k.txt`.
 
-**3. Folder/filename migration (hyphen → underscore)**
-- Updated all hard-coded references of hyphenated dataset names to underscored names
-- Changed `trec-covid` → `trec_covid`, `climate-fever` → `climate_fever` throughout codebase
-- Updated README.md, CLI defaults, and all code references
+2. **Added notebook-runner helper API**  
+   - Added `src/notebook/run_api.py` with `run_baseline()`, `baseline_exists()`, `ensure_baseline_runs()`, and `run_method(method_name)` stubs.  
+   - Functions orchestrate ingestion, indexing, retrieval, return clear booleans, and print informative messages.
 
-**4. Move ingested outputs to `output/ingest/`**
-- Updated `src/ingest/core.py` to set `INGESTED_ROOT = PROJECT_ROOT / "output" / "ingest"`
-- All helper functions and constants now use underscored dataset names and return paths like `output/ingest/trec_covid/docs.jsonl`
-- Replaced all code references that read `data/ingested/...` to point to `output/ingest/{dataset}`
+3. **Finalized folder/filename migration (hyphen → underscore)**  
+   - Replaced hyphenated dataset names with underscored names across the codebase (`trec-covid` → `trec_covid`, `climate-fever` → `climate_fever`).  
+   - Updated README.md, CLI defaults, and all code references.
 
-**5. Update dataset download/ingest code paths**
-- Changed download/extraction targets from `data/dataset/trec-covid.zip` to `data/dataset/trec_covid/trec_covid.zip`
-- Updated extraction logic in `src/ingest/beir_loader.py` and `src/ingest/materialize.py` accordingly
+4. **Moved ingested outputs to `output/ingest/`**  
+   - `src/ingest/core.py` sets `INGESTED_ROOT = PROJECT_ROOT / "output" / "ingest"`.  
+   - Helper functions and constants return paths like `output/ingest/trec_covid/docs.jsonl`. Replaced `data/ingested/...` references.
 
-**6. Baseline notebook: use ingest outputs and remove DUMMY support**
-- Modified `notebook/eval/baseline.ipynb` to import `ensure_baseline_runs` and call it when baseline files are missing
-- Removed automatic `_DUMMY` generation logic for baseline runs
-- Notebook now reads ingest outputs from `output/ingest/{dataset}`
+5. **Updated dataset download/ingest code paths**  
+   - Changed download/extraction targets from `data/dataset/trec-covid.zip` to `data/dataset/trec_covid/trec_covid.zip`.  
+   - Updated extraction logic in `src/ingest/beir_loader.py` and `src/ingest/materialize.py`.
 
-**7. Refactor the 4 notebooks to remove repetition**
-- Added shared imports at top of all notebooks: `from src.notebook.run_api import ensure_baseline_runs, run_method`
-- Added `from src.eval.compute_metrics import compute_and_save_metrics`
-- Replaced duplicated cells with calls to shared APIs
-- All notebooks (`baseline.ipynb`, `append.ipynb`, `reformulate.ipynb`, `agr.ipynb`) now use shared code
+6. **Ingest: normalized BEIR zip names and extracted datasets to dataset root**  
+    - `download_beir_dataset` now accepts hyphenated zip names (e.g., `climate-fever.zip`), renames them to underscored names (e.g., `climate_fever.zip`), places them under `data/dataset/{dataset_name}/`, and extracts files directly into that folder.  
+    - Extraction strips a single top-level directory when present so files land at `data/dataset/{dataset_name}/corpus.jsonl`. Supports both ZIP layouts: files at the archive root (e.g., `climate_fever.zip` contains `qrels.csv`) or nested inside a single top-level folder (e.g., `climate_fever.zip` contains `climate_fever/qrels.csv`).
 
-**8. Auto-run baseline from other notebooks**
-- Added `ensure_baseline_runs()` calls to `append.ipynb`, `reformulate.ipynb`, and `agr.ipynb`
-- Baseline is now programmatically created if missing (no manual notebook execution required)
+7. **Baseline notebook: used ingest outputs**  
+   - `notebook/eval/baseline.ipynb` imports and calls `ensure_baseline_runs()` when baseline files are missing.  
+   - Notebook reads ingest outputs from `output/ingest/{dataset}`.
 
-**9. Ensure baseline notebook consumes ingest outputs correctly**
-- Confirmed `baseline.ipynb` loads `docs.jsonl`, `qrels.csv`, `queries.csv`, `vocab_top50k.txt` from `output/ingest/{dataset}`
-- `manifest.jsonl` is available but not currently used in baseline evaluation
+8. **Removed DUMMY support from baseline notebook**  
+    - Eliminated all code that creates dummy baseline runs in `baseline.ipynb`. Baseline notebook relies entirely on `ensure_baseline_runs()`.
 
-**10. Finalize `src/eval/robustness_slices.py`**
-- Exposed `label_queries(dataset, run_df, qrels_df, vocab_path) -> pandas.DataFrame` function
-- Exposed `save_slices(dataset, slices_df, out_csv_path=None)` which writes to `output/eval/slice/{dataset}.csv` by default
-- Both functions work with pandas DataFrames and are importable by notebooks
+9. **Implemented a function that auto-runs baseline from other notebooks**  
+   - Added `ensure_baseline_runs()` calls to `append.ipynb`, `reformulate.ipynb`, and `agr.ipynb` so baseline is programmatically created if missing.
 
-**11. Migrate plotting cells from `output/eval/plots.ipynb`**
-- Moved relevant content from `output/eval/plots.ipynb` to the evaluation notebooks
-- The 4 evaluation notebooks now contain all necessary plotting functionality
+10. **Ensured baseline notebook consumes ingest outputs correctly**  
+   - Confirmed `baseline.ipynb` loads `docs.jsonl`, `qrels.csv`, `queries.csv`, `vocab_top50k.txt` from `output/ingest/{dataset}`. `manifest.jsonl` available but not used.
 
-**12. Extend `src/eval/stats_tests.py`**
-- Added `compute_paired_bootstrap_ci(runA_df, runB_df, qrels_df, metric='ndcg', k=10, num_samples=1000, seed=...)` function
-- Returns bootstrap confidence intervals and p-value as a dictionary
-- Works with run CSV DataFrames and qrels DataFrames
-- Function is importable by notebooks
+11. **Finalized `src/eval/robustness_slices.py`**  
+    - Exposed `label_queries(dataset, run_df, qrels_df, vocab_path) -> pandas.DataFrame`.  
+    - Exposed `save_slices(dataset, slices_df, out_csv_path=None)` which writes to `output/eval/slice/{dataset}.csv` by default. Both functions accept pandas DataFrames and are importable by notebooks.
 
-**13. Add tests**
-- Extended `test/test_eval.py` with:
-  - Unit tests for robustness slicing heuristics (synthetic data)
-  - Bootstrap CI function tests (simple runs with known expectations)
-  - `baseline_exists()` behavior tests using mocks
-- Tests are runnable from `notebook/test.ipynb` (no CLI pytest required)
+12. **Migrated plotting cells from `output/eval/plots.ipynb`**  
+    - Moved relevant plotting content into the four evaluation notebooks; notebooks now contain necessary plotting functionality. `plots.ipynb` was subsequently deleted.
 
-**14. Save p-values/CIs from notebooks**
-- Added notebook cells in `append.ipynb`, `reformulate.ipynb`, and `agr.ipynb` that call `compare_runs()` and save results
-- Results saved to `output/eval/metric/{method}/pvals_DUMMY.json` (for DUMMY runs) or `pvals_{method}.json` (for real runs)
-- JSON files contain method name and comparison results with p-values and CIs
+13. **Extended `src/eval/stats_tests.py`**  
+    - Added `compute_paired_bootstrap_ci(runA_df, runB_df, qrels_df, metric='ndcg', k=10, num_samples=1000, seed=...)`.  
+    - Returns bootstrap confidence intervals and p-value as a dictionary; importable by notebooks.
 
-**15. Remove DUMMY support from baseline notebook**
-- Eliminated all code that creates dummy baseline runs in `baseline.ipynb`
-- Baseline notebook now relies entirely on `ensure_baseline_runs()` to create real baseline runs
-- Other method notebooks may retain DUMMY logic during development if needed
+14. **Added tests**  
+    - Extended `test/test_eval.py` with unit tests for robustness slicing heuristics (synthetic data), bootstrap CI tests, and `baseline_exists()` behavior tests using mocks. Tests runnable from `notebook/test.ipynb`.
 
-### Additional Fixes
+15. **Saved p-values/CIs from notebooks**  
+    - Added notebook cells in `append.ipynb`, `reformulate.ipynb`, and `agr.ipynb` that call `compare_runs()` and save results to `output/eval/metric/{method}/pvals_DUMMY.json` (for DUMMY runs) or `pvals_{method}.json` (for real runs). JSON files contain method name and comparison results with p-values and CIs.
 
-- **Bug 1 (API Key)**: Moved Groq API key to `src/llm_qe/api_key.txt` (git-ignored) and updated `expander.py` to read from file, env var, or parameter
-- **Bug 2 (build_bm25)**: Fixed `build_bm25` to handle both pre-tokenized and non-tokenized corpora
-- **Bug 3 (regex)**: Fixed broken regex pattern in `list_remote_datasets()` in `src/ingest/beir_loader.py`
-- **Dataset name normalization**: Fixed `load_dataset()` to normalize hyphenated names (e.g., `trec-covid`) to underscored format (`trec_covid`)
+16. **Refactored the 4 notebooks to remove repetition**  
+   - Added shared imports at top of all notebooks: `from src.notebook.run_api import ensure_baseline_runs, run_method` and `from src.eval.compute_metrics import compute_and_save_metrics`.  
+   - Replaced duplicated cells with calls to shared APIs in `baseline.ipynb`, `append.ipynb`, `reformulate.ipynb`, `agr.ipynb`.
+
+17. **Updated load_beir_dataset to now expect files in dataset root**  
+    - `load_beir_dataset` docstring updated to state it expects files directly in `data/dataset/{dataset_name}/`. Implementation supports both layouts by detecting and stripping a single top-level directory when present.
+
+18. **Renamed `runner/` to `notebook/`**  
+    - Renamed directory and updated all references; `src/notebook/run_api.py` is the canonical runner API.
+
+19. **Updated README.md, .gitignore, and added `ssh_pull.py`**  
+    - README updated to reflect `output/ingest/` layout, underscored dataset names, and `notebook/` directory.  
+    - `.gitignore` updated to include `src/llm_qe/api_key.txt`, `output/`, and local artifacts.  
+    - Added `ssh_pull.py` (non-interactive) to download remote `output` into local project root; deletes local `output` first.
+
+20. **Added CSV qrels support**  
+    - `load_qrels_file` in `src/eval/metrics.py` now supports CSV (comma-separated) qrels with optional headers and retains space-separated parsing. Converts float scores to integer relevance labels and skips CSV headers automatically.
+
+21. **Ensured metrics parent directories**
+    - `save_metrics_to_csv` in `src/eval/compute_metrics.py` ensures parent directories are created and converts NumPy types to native Python floats for CSV compatibility.
+
+22. **Added robustness labeling and query ID normalization**  
+    - `notebook/eval/baseline.ipynb` now converts query IDs to strings when building query dicts (`{str(row["query_id"]): row["text"] ...}`).  
+    - `src/eval/robustness_slices.py` normalizes query IDs (handles both `int` and `str`) so run file keys match. `label_query_familiarity` updated to rely on `vocab_overlap` when `corpus` is `None` (if `vocab_overlap >= threshold`, label as familiar). Baseline metrics now display correctly.
+
+23. **Prettified runs JSON message and lint**  
+    - `baseline.ipynb` prints a prettified JSON message when runs are created or loaded for readability. Code updated and lint-clean across modified modules and notebooks.
+
+---
+
+## Bugfixes
+
+1. **build_bm25**  
+   - Fixed `build_bm25` to handle both pre-tokenized and non-tokenized corpora.
+
+2. **regex**  
+   - Fixed broken regex pattern in `list_remote_datasets()` in `src/ingest/beir_loader.py`.
+
+3. **API Key**  
+   - Moved Groq API key to `src/llm_qe/api_key.txt` (git-ignored). `expander.py` updated to read from file, environment variable, or parameter.
 
 ---
 
