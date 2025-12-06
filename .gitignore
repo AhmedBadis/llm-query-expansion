@@ -27,5 +27,5 @@ venv/
 data/
 output/
 
-# API keys (never commit)
+# API keys
 src/llm_qe/api_key.txt

@@ -10,10 +10,18 @@ points and instead call the underlying Python APIs directly.
 
 from pathlib import Path
 from typing import Dict, Optional
+import sys
+import os
 
-from src.ingest.api import prepare as ingest_prepare, ingest as ingest_dataset
-from src.ingest.core import INGESTED_ROOT, get_ingested_dataset_paths, load_ingested_dataset
-from src.retrieval.bm25.retrieval import run_bm25_baseline
+# Ensure src is in path for imports
+_file_dir = Path(__file__).resolve().parent
+_src_dir = _file_dir.parent
+if str(_src_dir) not in sys.path:
+    sys.path.insert(0, str(_src_dir))
+
+from ingest.api import prepare as ingest_prepare, ingest as ingest_dataset
+from ingest.core import INGESTED_ROOT, get_ingested_dataset_paths, load_ingested_dataset
+from retrieval.bm25.retrieval import run_bm25_baseline
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 OUTPUT_ROOT = PROJECT_ROOT / "output"
@@ -63,7 +71,7 @@ def ensure_baseline_runs(
     Returns:
         Mapping dataset -> retrieval -> Path to run file.
     """
-    from src.ingest.core import load_ingested_dataset  # local import to avoid cycles
+    from ingest.core import load_ingested_dataset  # local import to avoid cycles
 
     datasets = datasets or ["trec_covid", "climate_fever"]
     retrieval_methods = retrieval_methods or ["bm25"]
@@ -73,7 +81,7 @@ def ensure_baseline_runs(
     runs: Dict[str, Dict[str, Path]] = {}
 
     for dataset in datasets:
-        print(f"\n=== Dataset: {dataset} ===")
+        print(f"=== Dataset: {dataset} ===")
         # Ensure ingest artifacts exist
         try:
             corpus, queries, _ = load_ingested_dataset(dataset, ingested_root=INGESTED_ROOT)
@@ -90,7 +98,7 @@ def ensure_baseline_runs(
             _ensure_dirs(run_path.parent)
 
             if run_path.exists():
-                print(f"[{dataset} / {retrieval}] Baseline run already exists at {run_path}")
+                print(f"[{dataset} / {retrieval}] Baseline run already exists at {run_path}\n")
                 runs[dataset][retrieval] = run_path
                 continue
 
