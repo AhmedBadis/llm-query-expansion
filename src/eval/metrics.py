@@ -296,7 +296,8 @@ def load_qrels_file(filepath: str) -> Dict[str, Dict[str, int]]:
     """
     Load a qrels (relevance judgments) file.
     
-    Expected format: qid docid relevance (space or tab separated)
+    Expected CSV format: query_id,doc_id,score (header optional)
+    Expected space-separated format: qid docid relevance
     
     Args:
         filepath: Path to the qrels file.
@@ -312,19 +313,39 @@ def load_qrels_file(filepath: str) -> Dict[str, Dict[str, int]]:
             if not line or line.startswith('#'):
                 continue
             
-            # Handle both space and tab separation
-            parts = line.split()
-            if len(parts) >= 3:
-                qid = parts[0]
-                docid = parts[1]
-                try:
-                    relevance = int(parts[2])
-                except ValueError:
+            # Check if comma-separated (CSV format)
+            if ',' in line:
+                parts = [p.strip() for p in line.split(',')]
+                if len(parts) >= 3:
+                    qid = parts[0]
+                    docid = parts[1]
+                    try:
+                        # Handle float scores (convert to int for relevance labels)
+                        relevance = int(float(parts[2]))
+                    except ValueError:
+                        continue
+                else:
                     continue
-                
-                if qid not in qrels:
-                    qrels[qid] = {}
-                qrels[qid][docid] = relevance
+            else:
+                # Handle both space and tab separation
+                parts = line.split()
+                if len(parts) >= 3:
+                    qid = parts[0]
+                    docid = parts[1]
+                    try:
+                        relevance = int(float(parts[2]))
+                    except ValueError:
+                        continue
+                else:
+                    continue
+            
+            # Skip header if present
+            if qid.lower() in ['qid', 'query_id', 'queryid']:
+                continue
+            
+            if qid not in qrels:
+                qrels[qid] = {}
+            qrels[qid][docid] = relevance
     
     return qrels
 

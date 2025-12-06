@@ -257,14 +257,18 @@ def label_query_familiarity(
     }
     
     # Labeling logic
-    # Familiar: high vocab overlap AND high doc overlap
+    # Familiar: high vocab overlap AND (high doc overlap OR corpus not available)
     if vocab_overlap >= vocab_overlap_threshold:
-        # Check if top-3 docs have good overlap
-        if doc_overlap >= doc_overlap_threshold:
-            label = 'familiar'
+        # If corpus is available, require doc overlap; otherwise rely on vocab overlap
+        if corpus is not None:
+            if doc_overlap >= doc_overlap_threshold:
+                label = 'familiar'
+            else:
+                # High vocab but low doc overlap - ambiguous
+                label = 'unfamiliar'
         else:
-            # High vocab but low doc overlap - ambiguous
-            label = 'unfamiliar'
+            # No corpus available, rely on vocab overlap
+            label = 'familiar'
     else:
         # Low vocab overlap - likely unfamiliar
         label = 'unfamiliar'
@@ -321,12 +325,18 @@ def compute_query_slices(
     # Process each query
     slices = {}
     
+    # Normalize query IDs to strings for matching
+    run_keys = set(str(k) for k in run.keys())
+    
     for qid, query_text in queries.items():
-        if qid not in run:
+        qid_str = str(qid)
+        if qid_str not in run_keys:
             continue
         
+        # Use string key to access run
+        retrieved_docs = run[qid_str]
+        
         query_tokens = extract_tokens(query_text)
-        retrieved_docs = run[qid]
         
         label, features = label_query_familiarity(
             query_text,
@@ -339,7 +349,7 @@ def compute_query_slices(
             doc_overlap_threshold
         )
         
-        slices[qid] = {
+        slices[qid_str] = {
             'label': label,
             'query_text': query_text,
             'features': features

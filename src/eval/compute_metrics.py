@@ -79,12 +79,21 @@ def save_metrics_to_csv(
         retrieval: Retrieval method name (optional, for metadata).
     """
     import os
-    os.makedirs(os.path.dirname(output_path), exist_ok=True)
+    from pathlib import Path
+    
+    # Ensure output directory exists
+    output_dir = Path(output_path).parent
+    if str(output_dir) != '.':
+        os.makedirs(output_dir, exist_ok=True)
+    
+    # Convert numpy types to native Python types for CSV compatibility
+    clean_metrics = {k: float(v) for k, v in metrics.items()}
+    
     df = pd.DataFrame([{
         'dataset': dataset,
         'method': method,
         'retrieval': retrieval,
-        **metrics
+        **clean_metrics
     }])
     df.to_csv(output_path, index=False)
 
