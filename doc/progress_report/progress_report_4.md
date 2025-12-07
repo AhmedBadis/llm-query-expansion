@@ -72,7 +72,7 @@
 
 19. **Updated README.md, .gitignore, and added `ssh_pull.py`**  
     - README updated to reflect `output/ingest/` layout, underscored dataset names, and `notebook/` directory.  
-    - `.gitignore` updated to include `src/llm_qe/api_key.txt`, `output/`, and local artifacts.  
+    - `.gitignore` updated to include `.env`, `output/`, and local artifacts.  
     - Added `ssh_pull.py` (non-interactive) to download remote `output` into local project root; deletes local `output` first.
 
 20. **Added CSV qrels support**  
@@ -99,7 +99,7 @@
    - Fixed broken regex pattern in `list_remote_datasets()` in `src/ingest/beir_loader.py`.
 
 3. **API Key**  
-   - Moved Groq API key to `src/llm_qe/api_key.txt` (git-ignored). `expander.py` updated to read from file, environment variable, or parameter.
+   - Groq API key now read from `.env` file (git-ignored) using `python-dotenv`. `expander.py` updated to read from `.env` file (GROQ_API_KEY), environment variable, or parameter.
 
 ---
 

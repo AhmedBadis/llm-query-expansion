@@ -5,6 +5,14 @@ from enum import Enum
 from typing import Dict, Optional
 from tqdm import tqdm
 import os
+from pathlib import Path
+
+# Try to load dotenv for .env file support
+try:
+    from dotenv import load_dotenv
+    DOTENV_AVAILABLE = True
+except ImportError:
+    DOTENV_AVAILABLE = False
 
 # Local model imports 
 try:
@@ -51,16 +59,22 @@ class GroqQueryExpander:
         if not GROQ_AVAILABLE:
             raise ImportError("groq library required. Install with: pip install groq")
         
-        # Try to get API key from: 1) parameter, 2) api_key.txt file
+        # Try to get API key from: 1) parameter, 2) .env file
         self.api_key = api_key
         if not self.api_key:
-            # Try reading from api_key.txt file (git-ignored)
-            api_key_path = os.path.join(os.path.dirname(__file__), "api_key.txt")
-            if os.path.exists(api_key_path):
-                with open(api_key_path, "r", encoding="utf-8") as f:
-                    self.api_key = f.read().strip()
+            # Try loading from .env file in project root
+            if DOTENV_AVAILABLE:
+                # Find project root (go up from src/llm_qe/expander.py to project root)
+                project_root = Path(__file__).parent.parent.parent
+                env_path = project_root / ".env"
+                if env_path.exists():
+                    load_dotenv(env_path)
+                    self.api_key = os.getenv("GROQ_API_KEY")
+        
         if not self.api_key:
-            raise ValueError("API key required. Pass api_key or create src/llm_qe/api_key.txt")
+            raise ValueError(
+                "API key required. Pass api_key parameter or set GROQ_API_KEY in .env file at project root."
+            )
         
         self.client = Groq(api_key=self.api_key)
         self.model_name = model_name

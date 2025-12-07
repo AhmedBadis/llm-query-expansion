@@ -28,5 +28,6 @@ data/
 output/
 ssh_pull.py
 
-# API keys
-src/llm_qe/api_key.txt
+# API keys and environment variables
+.env
+.env.local
