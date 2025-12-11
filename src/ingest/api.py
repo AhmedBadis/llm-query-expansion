@@ -7,7 +7,7 @@ This module exposes a small, stable surface:
 
 - prepare(): ensure directories and NLTK resources
 - download(dataset_name): download a BEIR dataset
-- ingest(dataset_name): materialize ingested artifacts under output/ingest/{dataset}
+- ingest(dataset_name): materialize ingested artifacts under data/ingest/{dataset}
 """
 
 from pathlib import Path
@@ -15,7 +15,8 @@ from typing import Dict, Optional
 
 from .core import (
     PROJECT_ROOT,
-    RAW_DATASETS_ROOT,
+    DOWNLOAD_ROOT,
+    EXTRACT_ROOT,
     INGESTED_ROOT,
     IngestedDatasetPaths,
     prepare_environment,
@@ -40,7 +41,7 @@ def prepare(*, ensure_dirs: bool = True, ensure_nltk: bool = True) -> Dict[str, 
     """
     Prepare the local environment for ingestion.
 
-    - Creates required folders (data/, data/dataset/, output/ingest/, data/nltk/)
+    - Creates required folders (data/, data/download/, data/extract/, data/ingest/, data/nltk/)
     - Optionally downloads required NLTK resources.
 
     Returns:
@@ -55,13 +56,13 @@ def download(dataset_name: str, *, output_dir: Optional[Path] = None) -> Optiona
 
     Args:
         dataset_name: Canonical dataset identifier (e.g. 'trec_covid', 'climate_fever').
-        output_dir: Optional custom directory for raw datasets. Defaults to RAW_DATASETS_ROOT.
+        output_dir: Optional custom directory for downloads. Defaults to DOWNLOAD_ROOT.
 
     Returns:
         Path to the extracted BEIR dataset directory, or None on failure.
     """
     canonical = _canonical_dataset_name(dataset_name)
-    return download_beir_dataset(canonical, output_dir or RAW_DATASETS_ROOT)
+    return download_beir_dataset(canonical, output_dir or DOWNLOAD_ROOT)
 
 
 def ingest(
@@ -76,7 +77,7 @@ def ingest(
     This will:
     - Load the BEIR dataset (corpus, queries, qrels)
     - Materialize docs.jsonl, queries.csv, qrels.csv, vocab_top50k.txt, manifest.json
-      under output/ingest/{dataset_name}
+      under data/ingest/{dataset_name}
 
     Args:
         dataset_name: Canonical dataset identifier (e.g. 'trec_covid', 'climate_fever').
@@ -88,21 +89,21 @@ def ingest(
     """
     canonical = _canonical_dataset_name(dataset_name)
 
-    # Ensure raw dataset is available; if not, attempt to download it.
-    raw_root = RAW_DATASETS_ROOT / canonical
-    if not raw_root.exists():
-        download_result = download(canonical, output_dir=RAW_DATASETS_ROOT)
+    # Ensure extracted dataset is available; if not, attempt to download it.
+    extract_root = EXTRACT_ROOT / canonical
+    if not extract_root.exists():
+        download_result = download(canonical, output_dir=DOWNLOAD_ROOT)
         if not download_result:
             raise FileNotFoundError(
-                f"Failed to download raw dataset for '{canonical}'. "
-                f"Expected raw files under {raw_root}"
+                f"Failed to download and extract dataset for '{canonical}'. "
+                f"Expected extracted files under {extract_root}"
             )
 
-    # Materialize ingested artifacts under output/ingest/{dataset}
+    # Materialize ingested artifacts under data/ingest/{dataset}
     paths = ingest_beir_dataset(
         canonical,
         split=split,
-        source_dir=RAW_DATASETS_ROOT,
+        source_dir=EXTRACT_ROOT,
         ingested_root=INGESTED_ROOT,
         vocab_size=vocab_size,
         overwrite=True,
@@ -110,6 +111,6 @@ def ingest(
     return paths
 
 
-__all__ = ["prepare", "download", "ingest", "IngestedDatasetPaths", "RAW_DATASETS_ROOT", "INGESTED_ROOT"]
+__all__ = ["prepare", "download", "ingest", "IngestedDatasetPaths", "DOWNLOAD_ROOT", "EXTRACT_ROOT", "INGESTED_ROOT"]
 
 

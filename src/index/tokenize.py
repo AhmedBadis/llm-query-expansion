@@ -8,7 +8,8 @@ from typing import Callable, Dict, List, MutableMapping, Optional, Sequence
 import nltk
 from tqdm import tqdm
 
-from ..ingest.core import (
+from ingest.core import (
+    DATA_ROOT,
     DEFAULT_NLTK_RESOURCES,
     INGESTED_ROOT,
     NLTK_DATA_PATH,
@@ -19,6 +20,7 @@ from ..ingest.core import (
 DOCS_TOKENIZED_FILENAME = "docs_tokenized.jsonl"
 DEFAULT_TOKENIZATION_FIELDS: Sequence[str] = ("text",)
 Tokenizer = Callable[[str], Sequence[str]]
+INDEX_ROOT = DATA_ROOT / "index"
 
 
 @dataclass(frozen=True)
@@ -48,7 +50,9 @@ class TokenizationConfig:
         return get_ingested_dataset_paths(self.dataset, ingested_root=self.resolve_root())
 
     def output_path(self) -> Path:
-        return self.dataset_paths().root / self.output_filename
+        # Write tokenized docs to data/index/{dataset}/{filename}
+        # Always use DATA_ROOT for consistency
+        return DATA_ROOT / "index" / self.dataset / self.output_filename
 
 
 def ensure_nltk_tokenizer(resources: Sequence[str] | None = None) -> Dict[str, str]:
@@ -131,8 +135,9 @@ def load_tokenized_corpus(
     ingested_root: Optional[Path | str] = None,
     output_filename: str = DOCS_TOKENIZED_FILENAME,
 ) -> Dict[str, Dict[str, object]]:
-    root = Path(ingested_root) if ingested_root is not None else INGESTED_ROOT
-    output_path = get_ingested_dataset_paths(dataset, ingested_root=root).root / output_filename
+    # Load from data/index/{dataset}/{filename}
+    # Always use DATA_ROOT for consistency
+    output_path = DATA_ROOT / "index" / dataset / output_filename
     if not output_path.exists():
         raise FileNotFoundError(
             f"Tokenized corpus not found for dataset '{dataset}'. Expected file at {output_path}."

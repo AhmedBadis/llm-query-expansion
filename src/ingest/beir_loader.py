@@ -8,7 +8,7 @@ from typing import Dict, Optional, Sequence, Tuple
 import requests
 from beir.datasets.data_loader import GenericDataLoader
 
-from .core import RAW_DATASETS_ROOT
+from .core import DOWNLOAD_ROOT, EXTRACT_ROOT
 
 REMOTE_DATASETS_URL = "https://public.ukp.informatik.tu-darmstadt.de/thakur/BEIR/datasets/"
 
@@ -34,12 +34,12 @@ def load_beir_dataset(
     Load a BEIR dataset from disk.
 
     The function expects datasets to be stored directly under:
-        data/dataset/{dataset_name}/
+        data/extract/{dataset_name}/
     where dataset_name uses underscores (e.g. 'trec_covid').
     Files (corpus.jsonl, queries.jsonl, qrels/) are expected to be directly in this directory.
     """
     canonical = dataset_name
-    base_dir = Path(data_dir or RAW_DATASETS_ROOT) / canonical
+    base_dir = Path(data_dir or EXTRACT_ROOT) / canonical
     if not base_dir.exists():
         raise FileNotFoundError(
             f"Dataset not found at {base_dir}. "
@@ -53,11 +53,11 @@ def download_beir_dataset(dataset_name: str, output_dir: Optional[Path] = None) 
     Download and unzip a BEIR dataset.
 
     Downloads the zip file with hyphenated name, renames it to use underscores,
-    and extracts contents directly to the target directory (not in a subdirectory).
+    saves it to data/download/, and extracts contents to data/extract/.
 
     Args:
         dataset_name: Canonical dataset name with underscores (e.g. 'trec_covid').
-        output_dir: Base directory for raw datasets (defaults to RAW_DATASETS_ROOT).
+        output_dir: Base directory for downloads (defaults to DOWNLOAD_ROOT).
 
     Returns:
         Path to the extracted BEIR dataset directory, or None on failure.
@@ -65,13 +65,18 @@ def download_beir_dataset(dataset_name: str, output_dir: Optional[Path] = None) 
     canonical = dataset_name
     beir_name = _canonical_to_beir_name(canonical)
     url = f"{REMOTE_DATASETS_URL}{beir_name}.zip"
-    base_root = Path(output_dir or RAW_DATASETS_ROOT)
-    target_dir = base_root / canonical
-    target_dir.mkdir(parents=True, exist_ok=True)
+    download_root = Path(output_dir or DOWNLOAD_ROOT)
+    download_root.mkdir(parents=True, exist_ok=True)
     
-    # Zip file will be renamed to use underscores
+    # Zip file will be saved to data/download/{dataset_name}.zip
     zip_filename = f"{canonical}.zip"
-    zip_path = target_dir / zip_filename
+    zip_path = download_root / zip_filename
+    
+    # Extract to data/extract/{dataset_name}/
+    extract_root = EXTRACT_ROOT
+    extract_root.mkdir(parents=True, exist_ok=True)
+    target_dir = extract_root / canonical
+    target_dir.mkdir(parents=True, exist_ok=True)
 
     print(f"Downloading {canonical} (BEIR name: {beir_name}) from {url} ...")
     try:
@@ -80,12 +85,14 @@ def download_beir_dataset(dataset_name: str, output_dir: Optional[Path] = None) 
         response.raise_for_status()
         
         # Save to temporary hyphenated name first, then rename
-        temp_zip_path = target_dir / f"{beir_name}.zip"
+        temp_zip_path = download_root / f"{beir_name}.zip"
         with open(temp_zip_path, 'wb') as f:
             for chunk in response.iter_content(chunk_size=8192):
                 f.write(chunk)
         
-        # Rename to use underscores
+        # Rename to use underscores (handle case where target already exists)
+        if zip_path.exists():
+            zip_path.unlink()  # Remove existing file
         temp_zip_path.rename(zip_path)
         print(f"Downloaded and renamed to {zip_path}")
         

@@ -3,8 +3,9 @@
 from .core import (
     DATA_ROOT,
     DOCS_TOKENIZED_FILENAME,
+    DOWNLOAD_ROOT,
+    EXTRACT_ROOT,
     INGESTED_ROOT,
-    RAW_DATASETS_ROOT,
     get_ingested_dataset_paths,
     load_ingested_dataset,
     prepare_environment,
@@ -14,7 +15,8 @@ from .materialize import ingest_beir_dataset
 
 __all__ = [
     "DATA_ROOT",
-    "RAW_DATASETS_ROOT",
+    "DOWNLOAD_ROOT",
+    "EXTRACT_ROOT",
     "INGESTED_ROOT",
     "DOCS_TOKENIZED_FILENAME",
     "get_ingested_dataset_paths",

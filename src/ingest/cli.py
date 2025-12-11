@@ -8,8 +8,9 @@ from typing import Any, Dict, Sequence
 from . import __version__
 from .core import (
     DEFAULT_NLTK_RESOURCES,
+    DOWNLOAD_ROOT,
+    EXTRACT_ROOT,
     INGESTED_ROOT,
-    RAW_DATASETS_ROOT,
     prepare_environment,
 )
 from .beir_loader import download_beir_dataset, list_remote_datasets
@@ -49,7 +50,7 @@ def build_parser() -> argparse.ArgumentParser:
             "Use underscored names; these are mapped to BEIR's hyphenated identifiers internally."
         ),
     )
-    download.add_argument("--output-dir", type=Path, default=RAW_DATASETS_ROOT, help="Target download dir.")
+    download.add_argument("--output-dir", type=Path, default=DOWNLOAD_ROOT, help="Target download dir.")
     download.add_argument("--list", action="store_true", help="List remote BEIR datasets.")
 
     ingest = subparsers.add_parser(
@@ -66,8 +67,8 @@ def build_parser() -> argparse.ArgumentParser:
     ingest.add_argument(
         "--source-dir",
         type=Path,
-        default=RAW_DATASETS_ROOT,
-        help="Directory containing downloaded BEIR datasets.",
+        default=EXTRACT_ROOT,
+        help="Directory containing extracted BEIR datasets.",
     )
     ingest.add_argument(
         "--ingested-root",

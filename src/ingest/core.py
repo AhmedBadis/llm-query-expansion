@@ -12,11 +12,12 @@ from nltk.downloader import Downloader
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 NLTK_DATA_PATH = str(PROJECT_ROOT / "data" / "nltk")
 DATA_ROOT = Path(PROJECT_ROOT) / "data"
-# Raw BEIR datasets (downloaded ZIPs and extracted folders)
-RAW_DATASETS_ROOT = DATA_ROOT / "dataset"
+# Downloaded BEIR dataset ZIP files
+DOWNLOAD_ROOT = DATA_ROOT / "download"
+# Extracted BEIR datasets (corpus.jsonl, queries.jsonl, qrels/)
+EXTRACT_ROOT = DATA_ROOT / "extract"
 # Ingested artifacts (corpus, queries, qrels, vocab, manifests)
-# NOTE: these are now written under output/ingest/{dataset} instead of data/ingested/{dataset}
-INGESTED_ROOT = Path(PROJECT_ROOT) / "output" / "ingest"
+INGESTED_ROOT = DATA_ROOT / "ingest"
 DEFAULT_NLTK_RESOURCES: Tuple[str, ...] = ("punkt", "punkt_tab")
 DOCS_TOKENIZED_FILENAME = "docs_tokenized.jsonl"
 
@@ -65,7 +66,8 @@ def prepare_environment(
     if ensure_dirs:
         for label, target in (
             ("data_root", DATA_ROOT),
-            ("raw_datasets", RAW_DATASETS_ROOT),
+            ("download", DOWNLOAD_ROOT),
+            ("extract", EXTRACT_ROOT),
             ("ingested", INGESTED_ROOT),
             ("nltk", Path(NLTK_DATA_PATH)),
         ):

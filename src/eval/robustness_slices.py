@@ -439,19 +439,19 @@ def label_queries(
 
 def save_slices(dataset: str, slices_df: pd.DataFrame, out_csv_path: Optional[str] = None):
     """
-    Save query slices to output/eval/slice/{dataset}.csv.
+    Save query slices to data/eval/slice/{dataset}.csv.
     
     Args:
         dataset: Dataset name.
         slices_df: DataFrame to save with columns: qid, query_text, label, vocab_overlap, oov_ratio, 
                    doc_overlap, has_numeric_ids, has_chemical_names, has_uncommon_acronyms.
-        out_csv_path: Optional full path to output CSV file. If None, defaults to output/eval/slice/{dataset}.csv.
+        out_csv_path: Optional full path to output CSV file. If None, defaults to data/eval/slice/{dataset}.csv.
     """
     from pathlib import Path
     from src.ingest.core import PROJECT_ROOT
     
     if out_csv_path is None:
-        out_csv_path = str(PROJECT_ROOT / "output" / "eval" / "slice" / f"{dataset}.csv")
+        out_csv_path = str(PROJECT_ROOT / "data" / "eval" / "slice" / f"{dataset}.csv")
     
     Path(out_csv_path).parent.mkdir(parents=True, exist_ok=True)
     slices_df.to_csv(out_csv_path, index=False)
