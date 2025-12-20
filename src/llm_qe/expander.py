@@ -58,33 +58,25 @@ class GroqQueryExpander:
     ):
         if not GROQ_AVAILABLE:
             raise ImportError("groq library required. Install with: pip install groq")
-        
-        # Try to get API key from: 1) parameter, 2) .env file
+
         self.api_key = api_key
-        if not self.api_key:
-            # Try loading from .env file in project root
-            if DOTENV_AVAILABLE:
-                # Find project root (go up from src/llm_qe/expander.py to project root)
-                project_root = Path(__file__).parent.parent.parent
-                env_path = project_root / ".env"
-                if env_path.exists():
-                    load_dotenv(env_path)
-                    self.api_key = os.getenv("GROQ_API_KEY")
-        
+        if not self.api_key and DOTENV_AVAILABLE:
+            load_dotenv()
+            self.api_key = os.getenv("GROQ_API_KEY")
+
         if not self.api_key:
             raise ValueError(
-                "API key required. Pass api_key parameter or set GROQ_API_KEY in .env file at project root."
+                "API key required. Pass api_key parameter or set GROQ_API_KEY in .env file."
             )
-        
+
         self.client = Groq(api_key=self.api_key)
         self.model_name = model_name
         self.strategy = strategy
         self.max_tokens = max_tokens
         self.temperature = temperature
-        
-        # Set prompt template based on strategy
+
         self.prompt_template = self._get_default_prompt()
-        
+
         print(f"Strategy: {strategy.value}")
     
     def _get_default_prompt(self) -> str:

@@ -44,7 +44,7 @@ def baseline_exists(dataset: str, retrieval: str = "bm25") -> bool:
 
     Args:
         dataset: Dataset identifier (e.g. 'trec_covid', 'climate_fever').
-        retrieval: Retrieval method name (currently 'bm25' or 'tf_idf').
+        retrieval: Retrieval method name (currently 'bm25' or 'tfidf').
 
     Returns:
         True if a baseline run file exists, False otherwise.
@@ -402,5 +402,3 @@ __all__ = [
     "run_baseline",
     "run_method",
 ]
-
-

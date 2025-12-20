@@ -1,3 +1,4 @@
+# TODO: Migrate to ingest/utils.py and delete this file
 """Shared utilities package."""
 
 def set_nltk_path():
