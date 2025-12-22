@@ -13,7 +13,7 @@ sys.path.insert(0, str(project_dir / "src"))
 
 from llm_qe import LLMQueryExpander, ExpansionStrategy
 from ingest import load_dataset
-from utils import set_nltk_path
+from ingest.utils import set_nltk_path
 
 
 def save_json(data, path):

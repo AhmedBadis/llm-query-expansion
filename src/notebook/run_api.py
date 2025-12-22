@@ -12,6 +12,7 @@ from pathlib import Path
 from typing import Dict, Optional, Tuple
 import sys
 import os
+import json
 
 # Ensure src is in path for imports
 _file_dir = Path(__file__).resolve().parent
@@ -28,7 +29,7 @@ from ingest.core import (
     load_ingested_dataset,
     DATA_ROOT,
 )
-from retrieval.bm25.retrieval import run_bm25_baseline
+from retrieval import run_baseline as run_retrieval_baseline
 from index.tokenize import tokenize_corpus, load_tokenized_corpus
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
@@ -49,12 +50,12 @@ def baseline_exists(dataset: str, retrieval: str = "bm25") -> bool:
     Returns:
         True if a baseline run file exists, False otherwise.
     """
-    run_path = DATA_ROOT / "retrieval" / "baseline" / f"{retrieval}_{dataset}.csv"
+    run_path = DATA_ROOT / "retrieval" / "baseline" / f"{dataset}_{retrieval}.csv"
     return run_path.exists()
 
 
 def _baseline_run_path(dataset: str, retrieval: str = "bm25") -> Path:
-    return DATA_ROOT / "retrieval" / "baseline" / f"{retrieval}_{dataset}.csv"
+    return DATA_ROOT / "retrieval" / "baseline" / f"{dataset}_{retrieval}.csv"
 
 def _latest_mtime(path: Path) -> float:
     """Return latest modification time under path (files only)."""
@@ -185,7 +186,7 @@ def ensure_baseline_runs(
     from ingest.core import load_ingested_dataset  # local import to avoid cycles
 
     datasets = datasets or ["trec_covid", "climate_fever"]
-    retrieval_methods = retrieval_methods or ["bm25"]
+    retrieval_methods = retrieval_methods or ["bm25", "tfidf"]
 
     ingest_prepare(ensure_dirs=True, ensure_nltk=True)
 
@@ -203,21 +204,14 @@ def ensure_baseline_runs(
         # Check order 1: Retrieval run file
         all_runs_valid = True
         for retrieval, run_path in run_paths.items():
-            if retrieval != "bm25":
-                continue
             if not _is_run_valid(run_path, dataset):
                 all_runs_valid = False
                 break
 
         if all_runs_valid:
             for retrieval, run_path in run_paths.items():
-                if retrieval != "bm25":
-                    continue
-                print(f"[{dataset}] All requested baseline runs valid; skipping all upstream work.")
+                print(f"[{dataset}] All requested baseline {retrieval} runs are valid; skipping all upstream work.")
                 runs[dataset][retrieval] = run_path
-            for retrieval in retrieval_methods:
-                if retrieval not in runs[dataset]:
-                    print(f"[{dataset} / {retrieval}] Non-BM25 baselines not yet implemented; skipping.")
             continue
 
         # Check order 2: Tokenized index
@@ -291,9 +285,25 @@ def ensure_baseline_runs(
         # Load ingested corpus
         try:
             corpus, queries, _ = load_ingested_dataset(dataset, ingested_root=INGESTED_ROOT)
-        except FileNotFoundError:
-            print(f"✗ Failed to load ingested dataset '{dataset}'")
-            continue
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            print(
+                f"[{dataset}] Ingested artifacts appear missing or corrupted ({e}). "
+                "Re-ingesting and retrying..."
+            )
+            try:
+                ingest_dataset(dataset)
+            except Exception as ingest_exc:
+                print(f"✗ Failed to re-ingest {dataset}: {ingest_exc}")
+                continue
+
+            try:
+                corpus, queries, _ = load_ingested_dataset(dataset, ingested_root=INGESTED_ROOT)
+            except Exception as retry_exc:
+                print(f"✗ Failed to load ingested dataset '{dataset}' after re-ingest: {retry_exc}")
+                continue
+
+            # Ingest artifacts changed; tokenized index is now stale.
+            needs_tokenization = True
 
         # Order 3: Tokenize (if needed)
         if needs_tokenization:
@@ -303,7 +313,10 @@ def ensure_baseline_runs(
                 print(f"✓ Tokenized {report.docs_processed} documents for {dataset}")
                 has_tokenized = True
             except Exception as e:
-                print(f"Warning: Failed to tokenize {dataset}: {e}. Continuing with on-the-fly tokenization.")
+                print(
+                    f"Warning: Failed to tokenize {dataset}: {e}. "
+                    "Continuing with on-the-fly tokenization."
+                )
                 has_tokenized = False
 
         # Load tokenized data and merge into corpus if available (for faster BM25)
@@ -327,10 +340,6 @@ def ensure_baseline_runs(
                 runs[dataset][retrieval] = run_path
                 continue
 
-            if retrieval != "bm25":
-                print(f"[{dataset} / {retrieval}] Non-BM25 baselines not yet implemented; skipping.")
-                continue
-
             # Simple lock to avoid concurrent builds (best-effort)
             lock_path = run_path.with_suffix(run_path.suffix + ".lock")
             got_lock = False
@@ -348,8 +357,9 @@ def ensure_baseline_runs(
                     continue
 
             try:
-                print(f"[{dataset} / {retrieval}] Running BM25 baseline...")
-                results = run_bm25_baseline(corpus, queries, top_k=top_k)
+                print(f"[{dataset} / {retrieval}] Running {retrieval} baseline...")
+                print(retrieval)
+                results = run_retrieval_baseline(corpus, queries, retrieval=retrieval, top_k=top_k)
 
                 # Prepare rows iterator for atomic write
                 def rows():

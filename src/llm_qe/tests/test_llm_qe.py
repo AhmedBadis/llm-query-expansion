@@ -44,7 +44,7 @@ print(f"\n[4/7] Project structure:")
 project_root = Path.cwd()
 required_dirs = [
     "src/llm_qe",
-    "src/retrieval/bm25",
+    "src/retrieval",
     "src/ingest",
     "src/eval"
 ]
@@ -105,16 +105,16 @@ except ImportError:
     print("       ⚠️  Cannot import ingest (might need data setup)")
 
 try:
-    from retrieval.bm25 import run_bm25_baseline
-    print("       ✓ Can import retrieval.bm25")
+    from retrieval import run_bm25_baseline
+    print("       ✓ Can import retrieval.run_bm25_baseline")
 except ImportError:
-    print("       ⚠️  Cannot import retrieval.bm25")
+    print("       ⚠️  Cannot import retrieval")
 
 try:
-    from utils import set_nltk_path
-    print("       ✓ Can import utils.set_nltk_path")
+    from ingest.utils import set_nltk_path
+    print("       ✓ Can import ingest.utils.set_nltk_path")
 except ImportError:
-    print("       ⚠️  Cannot import utils")
+    print("       ⚠️  Cannot import ingest.utils")
 
 # Final summary
 print("\n" + "="*60)
