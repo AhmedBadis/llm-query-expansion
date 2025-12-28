@@ -451,7 +451,7 @@ def save_slices(dataset: str, slices_df: pd.DataFrame, out_csv_path: Optional[st
     from src.ingest.core import PROJECT_ROOT
     
     if out_csv_path is None:
-        out_csv_path = str(PROJECT_ROOT / "data" / "eval" / "slice" / f"{dataset}.csv")
+        out_csv_path = str(PROJECT_ROOT / "data" / "evaluate" / "slice" / f"{dataset}.csv")
     
     Path(out_csv_path).parent.mkdir(parents=True, exist_ok=True)
     slices_df.to_csv(out_csv_path, index=False)

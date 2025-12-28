@@ -5,7 +5,6 @@ from enum import Enum
 from typing import Dict, Optional
 from tqdm import tqdm
 import os
-from pathlib import Path
 
 # Try to load dotenv for .env file support
 try:
@@ -40,12 +39,7 @@ class ExpansionStrategy(Enum):
     APPEND = "append"
     REFORMULATE = "reformulate"
     ANALYZE_GENERATE_REFINE = "analyze_generate_refine"
-    AGR = "agr"
 
-
-# =============================================================================
-# GROQ API EXPANDER (Recommended - Fast & Free)
-# =============================================================================
 
 class GroqQueryExpander:
 
@@ -61,14 +55,16 @@ class GroqQueryExpander:
             raise ImportError("groq library required. Install with: pip install groq")
 
         self.api_key = api_key
+
+        if not DOTENV_AVAILABLE:
+            raise ImportError("dotenv library required. Install with: pip install dotenv")
+        
         if not self.api_key and DOTENV_AVAILABLE:
             load_dotenv()
             self.api_key = os.getenv("API_KEY")
 
         if not self.api_key:
-            raise ValueError(
-                "API key required. Pass api_key parameter or set API_KEY in .env file."
-            )
+            raise ValueError("API key required. Pass api_key parameter or set API_KEY in .env file.")
 
         self.client = Groq(api_key=self.api_key)
         self.model_name = model_name
@@ -85,7 +81,7 @@ class GroqQueryExpander:
             return APPEND_PROMPT
         elif self.strategy == ExpansionStrategy.REFORMULATE:
             return REFORMULATE_PROMPT
-        elif self.strategy in {ExpansionStrategy.ANALYZE_GENERATE_REFINE, ExpansionStrategy.AGR}:
+        elif self.strategy == ExpansionStrategy.ANALYZE_GENERATE_REFINE:
             return ANALYZE_GENERATE_REFINE_PROMPT
         else:
             raise ValueError(f"Unknown strategy: {self.strategy}")
@@ -123,7 +119,7 @@ class GroqQueryExpander:
         elif self.strategy == ExpansionStrategy.REFORMULATE:
             return response
         
-        elif self.strategy in {ExpansionStrategy.ANALYZE_GENERATE_REFINE, ExpansionStrategy.AGR}:
+        elif self.strategy == ExpansionStrategy.ANALYZE_GENERATE_REFINE:
             return self._extract_refined_query(response)
         
         else:
@@ -227,7 +223,7 @@ class LLMQueryExpander:
             return APPEND_PROMPT
         elif self.strategy == ExpansionStrategy.REFORMULATE:
             return REFORMULATE_PROMPT
-        elif self.strategy in {ExpansionStrategy.ANALYZE_GENERATE_REFINE, ExpansionStrategy.AGR}:
+        elif self.strategy == ExpansionStrategy.ANALYZE_GENERATE_REFINE:
             return ANALYZE_GENERATE_REFINE_PROMPT
         else:
             raise ValueError(f"Unknown strategy: {self.strategy}")
@@ -273,7 +269,7 @@ class LLMQueryExpander:
         elif self.strategy == ExpansionStrategy.REFORMULATE:
             return response
         
-        elif self.strategy in {ExpansionStrategy.ANALYZE_GENERATE_REFINE, ExpansionStrategy.AGR}:
+        elif self.strategy == ExpansionStrategy.ANALYZE_GENERATE_REFINE:
             return self._extract_refined_query(response)
         
         else:

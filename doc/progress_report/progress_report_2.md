@@ -1,6 +1,6 @@
 # Progress Report 2
 
-## Ahmed Badis Lakrach - Evaluation
+## Ahmed Badis Lakrach
 
 - Evaluation infrastructure: `src/eval/compute_metrics.py`, `src/eval/metrics.py`, `src/eval/stats_tests.py`, `src/eval/robustness_slices.py`
 - Unit tests: `tests/test_eval.py` with sample data

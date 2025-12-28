@@ -1,6 +1,6 @@
 # Progress Report 3
 
-## Ahmed Badis Lakrach - Evaluation
+## Ahmed Badis Lakrach
 
 ### Evaluation Infrastructure (Programmatic API)
 

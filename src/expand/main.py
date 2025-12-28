@@ -11,7 +11,7 @@ from pathlib import Path
 project_dir = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(project_dir / "src"))
 
-from llm_qe import LLMQueryExpander, ExpansionStrategy
+from expand import LLMQueryExpander, ExpansionStrategy
 from ingest import load_dataset
 from ingest.utils import set_nltk_path
 

@@ -50,10 +50,10 @@ Run `python -m src.ingest --help` to see all available commands.
 
 To run the pipeline using a certain method, run all cells at one of:
 
-- [runner/eval/baseline.ipynb](runner/eval/baseline.ipynb)
-- [runner/eval/append.ipynb](runner/eval/baseline.ipynb)
-- [runner/eval/reformulate.ipynb](runner/eval/reformulate.ipynb)
-- [runner/eval/agr.ipynb](runner/eval/agr.ipynb)
+- [runner/evaluate/baseline.ipynb](runner/evaluate/baseline.ipynb)
+- [runner/evaluate/append.ipynb](runner/evaluate/baseline.ipynb)
+- [runner/evaluate/reformulate.ipynb](runner/evaluate/reformulate.ipynb)
+- [runner/evaluate/agr.ipynb](runner/evaluate/agr.ipynb)
 
 ## Testing
 

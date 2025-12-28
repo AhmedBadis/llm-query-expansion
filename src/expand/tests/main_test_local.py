@@ -4,7 +4,7 @@ This file is intended for manual/local use only and should NOT be run in CI.
 It requires a valid API_KEY environment variable.
 """
 import os
-from llm_qe.expander import GroqQueryExpander, ExpansionStrategy
+from expand.expander import GroqQueryExpander, ExpansionStrategy
 
 API_KEY = os.getenv("API_KEY")
 if not API_KEY:

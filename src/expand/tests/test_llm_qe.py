@@ -43,10 +43,10 @@ except ImportError:
 print(f"\n[4/7] Project structure:")
 project_root = Path.cwd()
 required_dirs = [
-    "src/llm_qe",
-    "src/retrieval",
+    "src/expand",
+    "src/retrieve",
     "src/ingest",
-    "src/eval"
+    "src/evaluate"
 ]
 
 all_exist = True
@@ -65,10 +65,10 @@ if not all_exist:
 # Test 5: LLM-QE files
 print(f"\n[5/7] LLM-QE files:")
 llm_qe_files = [
-    "src/llm_qe/__init__.py",
-    "src/llm_qe/prompts.py",
-    "src/llm_qe/expander.py",
-    "src/llm_qe/main.py"
+    "src/expand/__init__.py",
+    "src/expand/prompts.py",
+    "src/expand/expander.py",
+    "src/expand/main.py"
 ]
 
 all_exist = True
@@ -84,14 +84,14 @@ if not all_exist:
     print("Missing LLM-QE files.")
     sys.exit(1)
 
-# Test 6: Can import llm_qe
+# Test 6: Can import expand
 print(f"\n[6/7] Import test:")
 try:
     sys.path.insert(0, str(project_root / "src"))
-    from llm_qe import ExpansionStrategy
-    from llm_qe.prompts import APPEND_PROMPT
-    print("Can import llm_qe.ExpansionStrategy")
-    print("Can import llm_qe.prompts")
+    from expand import ExpansionStrategy
+    from expand.prompts import APPEND_PROMPT
+    print("Can import expand.ExpansionStrategy")
+    print("Can import expand.prompts")
 except ImportError as e:
     print(f"Import failed: {e}")
     sys.exit(1)
@@ -105,7 +105,7 @@ except ImportError:
     print("Cannot import ingest (might need data setup)")
 
 try:
-    from retrieval import run_bm25_baseline
+    from retrieve import run_bm25_baseline
     print("Can import retrieval.run_bm25_baseline")
 except ImportError:
     print("Cannot import retrieval")

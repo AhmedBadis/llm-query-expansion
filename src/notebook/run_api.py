@@ -4,15 +4,18 @@ from __future__ import annotations
 Notebook orchestration helpers for running baselines and QE methods.
 
 All functions in this module are designed to be called from Jupyter notebooks
-under the `runner/` and `runner/eval/` folders. They do not rely on CLI entry
+under the `runner/` and `runner/evaluate/` folders. They do not rely on CLI entry
 points and instead call the underlying Python APIs directly.
 """
 
 from pathlib import Path
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Protocol, Tuple
 import sys
 import os
 import json
+import time
+import os
+
 
 # Ensure src is in path for imports
 _file_dir = Path(__file__).resolve().parent
@@ -29,11 +32,10 @@ from ingest.core import (
     load_ingested_dataset,
     DATA_ROOT,
 )
-from retrieval import run_baseline as run_retrieval_baseline
+from retrieve import run_baseline as run_retrieval_baseline
 from index.tokenize import tokenize_corpus, load_tokenized_corpus
 
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
-
 
 def _ensure_dirs(path: Path) -> None:
     path.mkdir(parents=True, exist_ok=True)
@@ -50,12 +52,12 @@ def baseline_exists(dataset: str, retrieval: str = "bm25") -> bool:
     Returns:
         True if a baseline run file exists, False otherwise.
     """
-    run_path = DATA_ROOT / "retrieval" / "baseline" / f"{dataset}_{retrieval}.csv"
+    run_path = DATA_ROOT / "retrieve" / "baseline" / f"{dataset}_{retrieval}.csv"
     return run_path.exists()
 
 
 def _baseline_run_path(dataset: str, retrieval: str = "bm25") -> Path:
-    return DATA_ROOT / "retrieval" / "baseline" / f"{dataset}_{retrieval}.csv"
+    return DATA_ROOT / "retrieve" / "baseline" / f"{dataset}_{retrieval}.csv"
 
 def _latest_mtime(path: Path) -> float:
     """Return latest modification time under path (files only)."""
@@ -160,428 +162,403 @@ def _atomic_write_csv(run_path: Path, rows_iter):
             writer.writerow(row)
     tmp.replace(run_path)
 
-import time
 
-def ensure_baseline_runs(
-    datasets: Optional[list[str]] = None,
-    retrieval_methods: Optional[list[str]] = None,
-    top_k: int = 100,
-) -> Dict[str, Dict[str, Path]]:
-    """
-    Ensure baseline runs exist for requested datasets and retrieval methods.
+class QueryPreparer(Protocol):
+    """Strategy interface to turn raw ingested queries -> queries used for retrieval."""
+    def prepare(self, dataset: str, queries: Dict[str, dict]) -> Dict[str, str]:
+        ...
 
-    Follows recommended check order (most processed to least):
-    1. Retrieval run file (data/retrieval/baseline/)
-    2. Tokenized index (data/index/{dataset}/docs_tokenized.jsonl)
-    3. Ingested artifacts (data/ingest/{dataset})
-    4. Extracted dataset (data/extract/{dataset})
-    5. Downloaded archive (data/download/{dataset}.zip)
-    6. Remote fetch (download from remote if nothing local)
 
-    Args:
-        datasets (list[str] | None): dataset ids; defaults to ["trec_covid","climate_fever"].
-        retrieval_methods (list[str] | None): retrievals; defaults to ["bm25"].
-        top_k (int): docs per query.
-
-    Returns:
-        Dict[str, Dict[str, Path]]: mapping dataset -> retrieval -> run file path.
-    """
-    from ingest.core import load_ingested_dataset  # local import to avoid cycles
-
-    datasets = datasets or ["trec_covid", "climate_fever"]
-    retrieval_methods = retrieval_methods or ["bm25", "tfidf"]
-
-    ingest_prepare(ensure_dirs=True, ensure_nltk=True)
-
-    runs: Dict[str, Dict[str, Path]] = {}
-
-    for dataset in datasets:
-        print(f"=== Dataset: {dataset} ===")
-        runs[dataset] = {}
-
-        # Precompute run paths for all retrievals
-        run_paths = {r: _baseline_run_path(dataset, r) for r in retrieval_methods}
-        for rpath in set(run_paths.values()):
-            _ensure_dirs(rpath.parent)
-
-        # Check order 1: Retrieval run file
-        all_runs_valid = True
-        for retrieval, run_path in run_paths.items():
-            if not _is_run_valid(run_path, dataset):
-                all_runs_valid = False
-                break
-
-        if all_runs_valid:
-            for retrieval, run_path in run_paths.items():
-                print(f"[{dataset}] All requested baseline {retrieval} runs are valid; skipping all upstream work.")
-                runs[dataset][retrieval] = run_path
-            continue
-
-        # Check order 2: Tokenized index
-        has_tokenized, tokenized_mtime = _check_tokenized_index(dataset)
-        needs_tokenization = not has_tokenized
-
-        # Check order 3: Ingested artifacts
-        has_ingested, ingested_mtime = _check_ingested_artifacts(dataset)
-        needs_ingestion = not has_ingested
-
-        # Check order 4: Extracted dataset
-        has_extracted, extracted_mtime = _check_extracted_dataset(dataset)
-        needs_extraction = not has_extracted
-
-        # Check order 5: Downloaded archive
-        has_downloaded, downloaded_mtime = _check_downloaded_archive(dataset)
-        needs_download = not has_downloaded
-
-        # Determine what needs to be done based on freshness
-        # If tokenized exists but is older than ingested, re-tokenize
-        if has_tokenized and has_ingested and tokenized_mtime < ingested_mtime:
-            print(f"[{dataset}] Tokenized index is stale (newer ingest found); will re-tokenize.")
-            needs_tokenization = True
-
-        # If ingested exists but is older than extracted, re-ingest
-        if has_ingested and has_extracted and ingested_mtime < extracted_mtime:
-            print(f"[{dataset}] Ingested artifacts are stale (newer extract found); will re-ingest.")
-            needs_ingestion = True
-
-        # If extracted exists but is older than download, re-extract
-        if has_extracted and has_downloaded and extracted_mtime < downloaded_mtime:
-            print(f"[{dataset}] Extracted dataset is stale (newer download found); will re-extract.")
-            needs_extraction = True
-
-        # Work backwards from least processed to most processed
-        # Order 6: Remote fetch (if needed)
-        if needs_download:
-            print(f"[{dataset}] No local archive found. Downloading from remote...")
-            result = ingest_download(dataset)
-            if result:
-                print(f"Downloaded {dataset}")
+class BaselineQueryPreparer:
+    """Identity preparer: baseline uses the ingested queries directly."""
+    def prepare(self, dataset: str, queries: Dict[str, dict]) -> Dict[str, str]:
+        # Keep original shape: if queries are {"qid": {"query": "..."}} or similar adapt as needed.
+        # Here we assume queries[qid] is either string or dict with 'query' key.
+        prepared: Dict[str, str] = {}
+        for qid, qdata in queries.items():
+            if isinstance(qdata, str):
+                prepared[qid] = qdata
+            elif isinstance(qdata, dict) and "query" in qdata:
+                prepared[qid] = qdata["query"]
             else:
-                print(f"Failed to download {dataset}")
-                continue
+                # Fallback: stringify
+                prepared[qid] = str(qdata)
+        return prepared
 
-        # Order 5: Extract (if needed)
-        # Note: download_beir_dataset already handles extraction, so if we downloaded,
-        # extraction should be done. But check if extraction is still needed.
-        if needs_extraction and has_downloaded:
-            # Re-extract from existing download
-            print(f"[{dataset}] Re-extracting from existing download...")
-            from ingest.beir_loader import download_beir_dataset
-            # download_beir_dataset will skip download if zip exists, but will extract
-            result = download_beir_dataset(dataset, DOWNLOAD_ROOT)
-            if result:
-                print(f"Extracted {dataset}")
-        elif needs_extraction and not has_downloaded:
-            # Download will handle extraction, so this case is covered by download step
-            pass
 
-        # Order 4: Ingest (if needed)
-        if needs_ingestion:
-            print(f"[{dataset}] Ingesting dataset...")
-            try:
-                ingest_dataset(dataset)
-                print(f"Ingested {dataset}")
-            except Exception as e:
-                print(f"Failed to ingest {dataset}: {e}")
-                continue
+class MethodQueryPreparer:
+    """Expander-based preparer: expands queries with an LLM expander and caches results."""
+    def __init__(
+        self,
+        method_name: str,
+        api_key: Optional[str] = None,
+        model_name: str = "llama-3.1-8b-instant",
+        overwrite_cache: bool = False,
+        expander: Optional[object] = None,
+    ):
+        self.method_name = method_name
+        self.api_key = api_key
+        self.model_name = model_name
+        self.overwrite_cache = overwrite_cache
+        self._provided_expander = expander
 
-        # Load ingested corpus
+    def _create_expander(self):
+        # Lazy import to preserve original behaviour and avoid hard deps for baseline users
         try:
-            corpus, queries, _ = load_ingested_dataset(dataset, ingested_root=INGESTED_ROOT)
+            from expand.expander import QueryExpander, ExpansionStrategy
+        except Exception as exc:
+            raise ImportError(
+                "QueryExpander is required for method notebooks. "
+                "Ensure dependencies are installed and API_KEY is set."
+            ) from exc
+
+        try:
+            strategy = getattr(ExpansionStrategy, self.method_name.upper())
+        except AttributeError as exc:
+            raise ValueError(f"Unknown method '{self.method_name}'.") from exc
+
+        return QueryExpander(api_key=self.api_key, model_name=self.model_name, strategy=strategy)
+
+    def prepare(self, dataset: str, queries: Dict[str, dict]) -> Dict[str, str]:
+        cache_path = _expansion_cache_path(dataset, self.method_name)
+        _ensure_dirs(cache_path.parent)
+
+        if cache_path.exists() and not self.overwrite_cache:
+            return json.loads(cache_path.read_text(encoding="utf-8"))
+
+        created = False
+        active_expander = self._provided_expander
+        if active_expander is None:
+            active_expander = self._create_expander()
+            created = True
+
+        try:
+            expanded = active_expander.expand_queries(queries, show_progress=True)
+        finally:
+            if created:
+                # cleanup if the expander exposes that method
+                try:
+                    active_expander.cleanup()
+                except Exception:
+                    pass
+
+        cache_path.write_text(json.dumps(expanded, indent=2, ensure_ascii=False), encoding="utf-8")
+        return expanded
+
+
+class RunManager:
+    """
+    Class-based orchestrator that ensures artifacts and generates runs for a single dataset.
+    Preserves the original check-order and behaviour but centralizes logic.
+    """
+
+    def __init__(
+        self,
+        dataset: str,
+        retrieval_methods: List[str],
+        top_k: int = 100,
+        query_preparer: Optional[QueryPreparer] = None,
+        max_queries: Optional[int] = None,
+    ):
+        self.dataset = dataset
+        self.retrieval_methods = retrieval_methods
+        self.top_k = top_k
+        self.query_preparer = query_preparer or BaselineQueryPreparer()
+        self.max_queries = max_queries
+
+        # state flags / mtimes
+        self.has_tokenized = False
+        self.has_ingested = False
+        self.has_extracted = False
+        self.has_downloaded = False
+        self.tokenized_mtime = 0.0
+        self.ingested_mtime = 0.0
+        self.extracted_mtime = 0.0
+        self.downloaded_mtime = 0.0
+
+    def prepare_environment(self) -> None:
+        """Prepare directories and NLP resources (keeps the original ingest_prepare call)."""
+        ingest_prepare(ensure_dirs=True, ensure_nltk=True)
+
+    def check_artifacts(self) -> None:
+        """Run the same checks as the original function and set flags/mtimes."""
+        self.has_tokenized, self.tokenized_mtime = _check_tokenized_index(self.dataset)
+        self.has_ingested, self.ingested_mtime = _check_ingested_artifacts(self.dataset)
+        self.has_extracted, self.extracted_mtime = _check_extracted_dataset(self.dataset)
+        self.has_downloaded, self.downloaded_mtime = _check_downloaded_archive(self.dataset)
+
+        # Decide freshness as in original flow
+        if self.has_tokenized and self.has_ingested and self.tokenized_mtime < self.ingested_mtime:
+            print(f"[{self.dataset}] Tokenized index is stale (newer ingest found); will re-tokenize.")
+            self.has_tokenized = False
+
+        if self.has_ingested and self.has_extracted and self.ingested_mtime < self.extracted_mtime:
+            print(f"[{self.dataset}] Ingested artifacts are stale (newer extract found); will re-ingest.")
+            self.has_ingested = False
+
+        if self.has_extracted and self.has_downloaded and self.extracted_mtime < self.downloaded_mtime:
+            print(f"[{self.dataset}] Extracted dataset is stale (newer download found); will re-extract.")
+            self.has_extracted = False
+
+    def ensure_downloaded_and_extracted(self) -> bool:
+        """Ensure the dataset archive exists locally and is extracted. Returns True on success."""
+        if not self.has_downloaded:
+            print(f"[{self.dataset}] No local archive found. Downloading from remote...")
+            result = ingest_download(self.dataset)
+            if result:
+                print(f"Downloaded {self.dataset}")
+                # After download, extraction may have been performed by the download helper
+                self.has_downloaded, self.downloaded_mtime = _check_downloaded_archive(self.dataset)
+                self.has_extracted, self.extracted_mtime = _check_extracted_dataset(self.dataset)
+            else:
+                print(f"Failed to download {self.dataset}")
+                return False
+
+        if not self.has_extracted and self.has_downloaded:
+            print(f"[{self.dataset}] Re-extracting from existing download...")
+            try:
+                # download_beir_dataset will skip redownload and extract if zip exists
+                from ingest.beir_loader import download_beir_dataset
+                download_beir_dataset(self.dataset, DOWNLOAD_ROOT)
+                self.has_extracted, self.extracted_mtime = _check_extracted_dataset(self.dataset)
+                if self.has_extracted:
+                    print(f"Extracted {self.dataset}")
+            except Exception as e:
+                print(f"[{self.dataset}] Extraction failed: {e}")
+                return False
+
+        return True
+
+    def ensure_ingested(self) -> bool:
+        """Ensure ingested artifacts exist (ingest if necessary)."""
+        if not self.has_ingested:
+            print(f"[{self.dataset}] Ingesting dataset...")
+            try:
+                ingest_dataset(self.dataset)
+                print(f"Ingested {self.dataset}")
+                self.has_ingested, self.ingested_mtime = _check_ingested_artifacts(self.dataset)
+            except Exception as e:
+                print(f"Failed to ingest {self.dataset}: {e}")
+                return False
+        return True
+
+    def load_ingested_safe(self) -> Tuple[Dict[str, dict], Dict[str, dict], dict]:
+        """Load ingested dataset, attempting re-ingest on failure -- mirrors original behavior."""
+        try:
+            return load_ingested_dataset(self.dataset, ingested_root=INGESTED_ROOT)
         except (FileNotFoundError, json.JSONDecodeError) as e:
             print(
-                f"[{dataset}] Ingested artifacts appear missing or corrupted ({e}). "
+                f"[{self.dataset}] Ingested artifacts appear missing or corrupted ({e}). "
                 "Re-ingesting and retrying..."
             )
             try:
-                ingest_dataset(dataset)
+                ingest_dataset(self.dataset)
             except Exception as ingest_exc:
-                print(f"Failed to re-ingest {dataset}: {ingest_exc}")
-                continue
+                raise RuntimeError(f"Failed to re-ingest {self.dataset}: {ingest_exc}") from ingest_exc
 
             try:
-                corpus, queries, _ = load_ingested_dataset(dataset, ingested_root=INGESTED_ROOT)
+                return load_ingested_dataset(self.dataset, ingested_root=INGESTED_ROOT)
             except Exception as retry_exc:
-                print(f"Failed to load ingested dataset '{dataset}' after re-ingest: {retry_exc}")
-                continue
+                raise RuntimeError(f"Failed to load ingested dataset '{self.dataset}' after re-ingest: {retry_exc}") from retry_exc
 
-            # Ingest artifacts changed; tokenized index is now stale.
-            needs_tokenization = True
-
-        # Order 3: Tokenize (if needed)
-        if needs_tokenization:
-            print(f"[{dataset}] Tokenizing corpus...")
+    def ensure_tokenized(self) -> bool:
+        """Tokenize the corpus if needed. Returns whether tokenized data is available afterwards."""
+        if not self.has_tokenized:
+            print(f"[{self.dataset}] Tokenizing corpus...")
             try:
-                report = tokenize_corpus(dataset)
-                print(f"Tokenized {report.docs_processed} documents for {dataset}")
-                has_tokenized = True
+                report = tokenize_corpus(self.dataset)
+                print(f"Tokenized {report.docs_processed} documents for {self.dataset}")
+                self.has_tokenized, self.tokenized_mtime = _check_tokenized_index(self.dataset)
+                return True
             except Exception as e:
                 print(
-                    f"Warning: Failed to tokenize {dataset}: {e}. "
+                    f"Warning: Failed to tokenize {self.dataset}: {e}. "
                     "Continuing with on-the-fly tokenization."
                 )
-                has_tokenized = False
+                self.has_tokenized = False
+                return False
+        return True
 
-        # Load tokenized data and merge into corpus if available (for faster BM25)
-        if has_tokenized:
-            try:
-                tokenized_corpus = load_tokenized_corpus(dataset)
-                for doc_id, doc_data in corpus.items():
-                    if doc_id in tokenized_corpus:
-                        tokens = tokenized_corpus[doc_id].get("text")
-                        if isinstance(tokens, list):
-                            doc_data["tokens"] = [str(token) for token in tokens if str(token)]
-                print(f"Loaded pre-tokenized data for faster BM25 retrieval")
-            except Exception as e:
-                print(f"Warning: Could not load tokenized data: {e}. Using on-the-fly tokenization.")
-
-        # Order 1: Generate retrieval runs (only those missing or invalid)
-        for retrieval in retrieval_methods:
-            run_path = run_paths[retrieval]
-            if run_path.exists() and _is_run_valid(run_path, dataset):
-                print(f"[{dataset} / {retrieval}] Baseline run already exists and is valid at {run_path}\n")
-                runs[dataset][retrieval] = run_path
-                continue
-
-            # Simple lock to avoid concurrent builds (best-effort)
-            lock_path = run_path.with_suffix(run_path.suffix + ".lock")
-            got_lock = False
-            try:
-                fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-                os.close(fd)
-                got_lock = True
-            except FileExistsError:
-                # Another process is building; wait a short time and re-check
-                print(f"[{dataset} / {retrieval}] Another process is building the run; waiting briefly...")
-                time.sleep(1.0)
-                if run_path.exists() and _is_run_valid(run_path, dataset):
-                    print(f"[{dataset} / {retrieval}] Run became available while waiting.")
-                    runs[dataset][retrieval] = run_path
-                    continue
-
-            try:
-                print(f"[{dataset} / {retrieval}] Running {retrieval} baseline...")
-                print(retrieval)
-                results = run_retrieval_baseline(corpus, queries, retrieval=retrieval, top_k=top_k)
-
-                # Prepare rows iterator for atomic write
-                def rows():
-                    yield ["qid", "docid", "score"]
-                    for qid, scored_docs in results.items():
-                        for doc_id, score in scored_docs.items():
-                            yield [qid, doc_id, float(score)]
-
-                _atomic_write_csv(run_path, rows())
-                print(f"[{dataset} / {retrieval}] Saved baseline run to {run_path}")
-                runs[dataset][retrieval] = run_path
-            finally:
-                if got_lock and lock_path.exists():
-                    try:
-                        lock_path.unlink()
-                    except OSError:
-                        pass
-
-    return runs
-
-def _method_run_path(dataset: str, method: str, retrieval: str) -> Path:
-    return DATA_ROOT / "retrieval" / method / f"{dataset}_{retrieval}.csv"
-
-def _expansion_cache_path(dataset: str, method: str) -> Path:
-    return DATA_ROOT / "expansion" / method / f"{dataset}.json"
-
-def ensure_method_runs(
-     *,
-     method_name: str,
-     strategy: str,
-     expander: Optional[object] = None,
-     datasets: Optional[list[str]] = None,
-     retrieval_methods: Optional[list[str]] = None,
-     top_k: int = 100,
-     max_queries: Optional[int] = None,
-     groq_model_name: str = "llama-3.1-8b-instant",
-     api_key: Optional[str] = None,
-     overwrite_expansions: bool = False,
-) -> Dict[str, Dict[str, Path]]:
-    from ingest.core import load_ingested_dataset
-
-    try:
-        from llm_qe.expander import GroqQueryExpander, ExpansionStrategy
-    except Exception as exc:
-        raise ImportError(
-            "GroqQueryExpander is required for method notebooks. "
-            "Ensure dependencies are installed and API_KEY is set."
-        ) from exc
-
-    if not isinstance(strategy, ExpansionStrategy):
-        raise TypeError("strategy must be an ExpansionStrategy")
-
-    datasets = datasets or ["trec_covid", "climate_fever"]
-    retrieval_methods = retrieval_methods or ["bm25", "tfidf"]
-
-    ingest_prepare(ensure_dirs=True, ensure_nltk=True)
-
-    # Ensure baseline runs exist for fair comparison and to guarantee ingest + index artifacts.
-    ensure_baseline_runs(datasets=datasets, retrieval_methods=retrieval_methods, top_k=top_k)
-
-    runs: Dict[str, Dict[str, Path]] = {}
-
-    for dataset in datasets:
-        print(f"=== Dataset: {dataset} ===")
-        runs[dataset] = {}
+    def load_tokenized_into_corpus(self, corpus: Dict[str, dict]) -> None:
+        """If tokenized corpus exists, merge tokens into the loaded corpus for faster retrieval."""
+        if not self.has_tokenized:
+            return
 
         try:
-            corpus, queries, _ = load_ingested_dataset(dataset, ingested_root=INGESTED_ROOT)
-        except (FileNotFoundError, json.JSONDecodeError) as e:
-            print(
-                f"[{dataset}] Ingested artifacts appear missing or corrupted ({e}). "
-                "Re-ingesting and retrying..."
-            )
-            try:
-                ingest_dataset(dataset)
-            except Exception as e:
-                print(f"Failed to ingest {dataset}: {e}")
-                continue
-
-            try:
-                corpus, queries, _ = load_ingested_dataset(dataset, ingested_root=INGESTED_ROOT)
-            except (FileNotFoundError, json.JSONDecodeError) as e:
-                print(
-                    f"[{dataset}] Ingested artifacts appear missing or corrupted ({e}). "
-                    "Re-ingesting and retrying..."
-                )
-                ingest_dataset(dataset)
-                corpus, queries, _ = load_ingested_dataset(dataset, ingested_root=INGESTED_ROOT)
-
-        # Try to load tokenized docs (for faster BM25 / consistent with baseline flow)
-        try:
-            tokenized_corpus = load_tokenized_corpus(dataset)
+            tokenized_corpus = load_tokenized_corpus(self.dataset)
             for doc_id, doc_data in corpus.items():
                 if doc_id in tokenized_corpus:
                     tokens = tokenized_corpus[doc_id].get("text")
                     if isinstance(tokens, list):
                         doc_data["tokens"] = [str(token) for token in tokens if str(token)]
-            print("Loaded pre-tokenized data for faster BM25 retrieval")
+            print(f"Loaded pre-tokenized data for faster retrieval")
         except Exception as e:
             print(f"Warning: Could not load tokenized data: {e}. Using on-the-fly tokenization.")
 
-        if max_queries is not None:
-            qids = sorted(list(queries.keys()))[: max_queries]
-            queries = {qid: queries[qid] for qid in qids}
+    def _write_run_with_lock(self, run_path: Path, rows_iter) -> None:
+        """Write run atomically and with a simple lock (best-effort to prevent concurrent builds)."""
+        _ensure_dirs(run_path.parent)
+        lock_path = run_path.with_suffix(run_path.suffix + ".lock")
+        got_lock = False
+        try:
+            fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.close(fd)
+            got_lock = True
+        except FileExistsError:
+            # Another process is building; wait briefly and re-check
+            print(f"[{self.dataset}] Another process is building the run; waiting briefly...")
+            time.sleep(1.0)
+            if run_path.exists() and _is_run_valid(run_path, self.dataset):
+                print(f"[{self.dataset}] Run became available while waiting.")
+                return
 
-        cache_path = _expansion_cache_path(dataset, method_name)
-        _ensure_dirs(cache_path.parent)
+        try:
+            _atomic_write_csv(run_path, rows_iter)
+        finally:
+            if got_lock and lock_path.exists():
+                try:
+                    lock_path.unlink()
+                except OSError:
+                    pass
 
-        expanded_queries: Dict[str, str]
-        if cache_path.exists() and not overwrite_expansions:
-            expanded_queries = json.loads(cache_path.read_text(encoding="utf-8"))
-        else:
-            created_expander = False
-            active_expander = expander
-            if active_expander is None:
-                active_expander = GroqQueryExpander(
-                    api_key=api_key,
-                    model_name=groq_model_name,
-                    strategy=strategy,
-                )
-                created_expander = True
+    def generate_runs(self, corpus: Dict[str, dict], queries: Dict[str, dict]) -> Dict[str, Path]:
+        """
+        Generate retrieval runs for all retrieval methods for this dataset, returning
+        dict mapping retrieval -> run_path.
+        """
+        runs: Dict[str, Path] = {}
+        # Prepare queries via the provided QueryPreparer strategy
+        prepared_queries = self.query_preparer.prepare(self.dataset, queries)
 
-            try:
-                expanded_queries = active_expander.expand_queries(queries, show_progress=True)
-            finally:
-                if created_expander:
-                    active_expander.cleanup()
+        # Optionally reduce queries set
+        if self.max_queries is not None:
+            qids = sorted(list(prepared_queries.keys()))[: self.max_queries]
+            prepared_queries = {qid: prepared_queries[qid] for qid in qids}
 
-            cache_path.write_text(
-                json.dumps(expanded_queries, indent=2, ensure_ascii=False),
-                encoding="utf-8",
-            )
+        for retrieval in self.retrieval_methods:
+            # Choose appropriate run path naming for method vs baseline preparer
+            if isinstance(self.query_preparer, BaselineQueryPreparer):
+                run_path = _baseline_run_path(self.dataset, retrieval)
+            else:
+                # method_name may come from the preparer object
+                method_norm = getattr(self.query_preparer, "method_name", "method")
+                run_path = _method_run_path(self.dataset, method_norm, retrieval)
 
-        for retrieval in retrieval_methods:
-            run_path = _method_run_path(dataset, method_name, retrieval)
             _ensure_dirs(run_path.parent)
 
-            if run_path.exists() and _is_run_valid(run_path, dataset, upstream_paths=[cache_path]):
-                print(f"[{dataset} / {retrieval}] {method_name} run already exists and is valid at {run_path}\n")
-                runs[dataset][retrieval] = run_path
+            # If run exists and valid with respect to cache upstream, skip
+            upstream_paths = []
+            if not isinstance(self.query_preparer, BaselineQueryPreparer):
+                cache_path = _expansion_cache_path(self.dataset, getattr(self.query_preparer, "method_name"))
+                upstream_paths = [cache_path]
+
+            if run_path.exists() and _is_run_valid(run_path, self.dataset, upstream_paths=upstream_paths):
+                print(f"[{self.dataset} / {retrieval}] Run already exists and is valid at {run_path}\n")
+                runs[retrieval] = run_path
                 continue
 
-            lock_path = run_path.with_suffix(run_path.suffix + ".lock")
-            got_lock = False
-            try:
-                fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-                os.close(fd)
-                got_lock = True
-            except FileExistsError:
-                print(f"[{dataset} / {retrieval}] Another process is building the run; waiting briefly...")
-                time.sleep(1.0)
-                if run_path.exists() and _is_run_valid(run_path, dataset, upstream_paths=[cache_path]):
-                    print(f"[{dataset} / {retrieval}] Run became available while waiting.")
-                    runs[dataset][retrieval] = run_path
-                    continue
+            print(f"[{self.dataset} / {retrieval}] Running retrieval ({retrieval})...")
+            results = run_retrieval_baseline(corpus, prepared_queries, retrieval=retrieval, top_k=self.top_k)
 
-            try:
-                print(f"[{dataset} / {retrieval}] Running {method_name} ({strategy.value}) with {retrieval}...")
-                results = run_retrieval_baseline(corpus, expanded_queries, retrieval=retrieval, top_k=top_k)
+            def rows():
+                yield ["qid", "docid", "score"]
+                for qid, scored_docs in results.items():
+                    for doc_id, score in scored_docs.items():
+                        yield [qid, doc_id, float(score)]
 
-                def rows():
-                    yield ["qid", "docid", "score"]
-                    for qid, scored_docs in results.items():
-                        for doc_id, score in scored_docs.items():
-                            yield [qid, doc_id, float(score)]
+            self._write_run_with_lock(run_path, rows())
+            print(f"[{self.dataset} / {retrieval}] Saved run to {run_path}")
+            runs[retrieval] = run_path
 
-                _atomic_write_csv(run_path, rows())
-                print(f"[{dataset} / {retrieval}] Saved {method_name} run to {run_path}")
-                runs[dataset][retrieval] = run_path
-            finally:
-                if got_lock and lock_path.exists():
-                    try:
-                        lock_path.unlink()
-                    except OSError:
-                        pass
+        return runs
+
+def _method_run_path(dataset: str, method: str, retrieval: str) -> Path:
+    return DATA_ROOT / "retrieve" / method / f"{dataset}_{retrieval}.csv"
+
+def _expansion_cache_path(dataset: str, method: str) -> Path:
+    return DATA_ROOT / "expand" / method / f"{dataset}.json"
+
+def ensure_runs(
+    *,
+    method: str,
+    expander: Optional[object] = None,
+    datasets: Optional[List[str]] = None,
+    retrieval_methods: Optional[List[str]] = None,
+    top_k: int = 100,
+    max_queries: Optional[int] = None,
+    model_name: str = "llama-3.1-8b-instant",
+    api_key: Optional[str] = None,
+    overwrite_expansions: bool = False,
+) -> Dict[str, Dict[str, Path]]:
+    """
+    Ensure runs for one of two modes:
+      - method == "baseline": uses raw ingested queries
+      - otherwise: treats method as expansion method name and uses expander
+    Returns mapping dataset -> retrieval -> run file path.
+    """
+    datasets = datasets or ["trec_covid", "climate_fever"]
+    retrieval_methods = retrieval_methods or ["bm25", "tfidf"]
+    method_norm = (method or "").strip().lower()
+
+    ingest_prepare(ensure_dirs=True, ensure_nltk=True)
+
+    runs: Dict[str, Dict[str, Path]] = {}
+
+    # select QueryPreparer strategy
+    if method_norm == "baseline":
+        preparer = BaselineQueryPreparer()
+    else:
+        preparer = MethodQueryPreparer(
+            method_name=method_norm,
+            api_key=api_key,
+            model_name=model_name,
+            overwrite_cache=overwrite_expansions,
+            expander=expander,
+        )
+
+    for dataset in datasets:
+        print(f"=== Dataset: {dataset} ===")
+        manager = RunManager(dataset, retrieval_methods, top_k=top_k, query_preparer=preparer, max_queries=max_queries)
+        runs[dataset] = {}
+
+        # 1) Check artifacts and freshness
+        manager.prepare_environment()
+        manager.check_artifacts()
+
+        # 2) Remote fetch / extract if needed
+        ok = manager.ensure_downloaded_and_extracted()
+        if not ok:
+            # skip dataset on failure to download/extract
+            continue
+
+        # 3) Ingest if needed
+        if not manager.ensure_ingested():
+            continue
+
+        # 4) Load ingested dataset (may trigger re-ingest inside)
+        try:
+            corpus, queries, _ = manager.load_ingested_safe()
+        except RuntimeError as exc:
+            print(exc)
+            continue
+
+        # 5) Tokenize if needed
+        manager.ensure_tokenized()
+
+        # 6) Merge tokenized into corpus for faster retrieval
+        manager.load_tokenized_into_corpus(corpus)
+
+        # 7) Generate runs
+        try:
+            dataset_runs = manager.generate_runs(corpus, queries)
+            runs[dataset].update(dataset_runs)
+        except Exception as e:
+            print(f"[{dataset}] Failed while generating runs: {e}")
+            # continue to next dataset
 
     return runs
 
-def run_baseline(
-    dataset: str,
-    retrieval: str = "bm25",
-    top_k: int = 100,
-) -> Optional[Path]:
-    """
-    Convenience wrapper to ensure and then return a single baseline run.
-    """
-    runs = ensure_baseline_runs(datasets=[dataset], retrieval_methods=[retrieval], top_k=top_k)
-    return runs.get(dataset, {}).get(retrieval)
-
-def run_method(method_name: str, dataset: str, retrieval: str = "bm25") -> bool:
-    """
-    Placeholder for future method orchestration (append/reformulate/agr).
-
-    For now, this function simply reports that method orchestration should be
-    implemented here and returns False.
-    """
-    from llm_qe.expander import ExpansionStrategy
-
-    strategy_map = {
-        "append": ExpansionStrategy.APPEND,
-        "reformulate": ExpansionStrategy.REFORMULATE,
-        "agr": ExpansionStrategy.AGR,
-    }
-    strategy = strategy_map.get(method_name)
-    if strategy is None:
-        raise ValueError(f"Unknown method '{method_name}'.")
-
-    runs = ensure_method_runs(
-        method_name=method_name,
-        strategy=strategy,
-        datasets=[dataset],
-        retrieval_methods=[retrieval],
-    )
-    return bool(runs.get(dataset, {}).get(retrieval))
-
 __all__ = [
     "baseline_exists",
-    "ensure_baseline_runs",
-    "ensure_method_runs",
-    "run_baseline",
-    "run_method",
+    "ensure_runs",
 ]

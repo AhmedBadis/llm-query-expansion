@@ -1,8 +1,9 @@
 # Progress Report 5
 
-## Retrieval + Baseline Evaluation Updates
 
-### ## Completed Tasks (1–11)
+## Ahmed Badis Lakrach
+
+### Completed Tasks (1–16)
 
 1. Added TF-IDF retrieval backend
 - Implemented a TF-IDF baseline retriever with the same output contract as BM25: `Dict[qid, Dict[doc_id, score]]`.
@@ -52,16 +53,32 @@
   - Plot: `data/eval/{method}/ndcg.png`  
   - P-values: `data/eval/{method}/pvals.json`
 
-10. Added method orchestration
+10. Improved method orchestration
 - Implemented `ensure_method_runs(...)` in `src/notebook/run_api.py`: loads ingested corpus/queries, uses the tokenized fast path when available, expands queries and caches to `data/expansion/{method}/{dataset}.json`, runs `bm25` and `tfidf`, and atomically writes validated run CSVs.  
+- Refactored orchestration into a single entry point `ensure_runs(method=...)` where `method ∈ {baseline, append, reformulate, agr}`, and updated notebooks to use this unified API.
 
 11. Added AGR support
 - Introduced `ExpansionStrategy.AGR = "agr"` in `src/llm_qe/expander.py` and wired AGR behavior into Groq + local expanders.
 
-TODO: 
-- Refactor/merge ensure_baseline_runs and ensure_method_runs into ensure_runs, method parameter takes "baseline", "append", "reformulate", "agr". ensure_runs is used in baseline.ipynb, append.ipynb, reformulate.ipynb and agr.ipynb
-- ensure_runs with "baseline" happens in notebooks before append, reformulate and agr
-- Remove run_baseline and run_method if unused
+12. Consolidated run orchestration  
+- Implemented `RunManager` in `src/notebook/run_manager.py`: centralizes dataset lifecycle (download → extract → ingest → tokenize → load → generate runs), merges tokenized fast-path into corpus, uses best-effort lock files (`*.lock`) and `_atomic_write_csv` for atomic/validated CSV writes, and preserves original freshness/retry logging and behaviour.  
+- Replaced duplicated logic by exposing a single entry point `ensure_runs(method=...)` in `src/notebook/run_api.py` that instantiates `RunManager` per-dataset and delegates run generation for `bm25`/`tfidf` (or other retrievals).
+
+13. Introduced pluggable query preparation & LLM expansion caching  
+- Added `QueryPreparer` protocol and two implementations in `src/notebook/run_manager.py`: `BaselineQueryPreparer` (uses ingested queries as-is) and `MethodQueryPreparer` (LLM-based expansion with lazy import of `llm_qe/expander`, cleanup support, and cache written to `data/expansion/{method}/{dataset}.json`).  
+- `ensure_runs` selects the appropriate preparer (baseline vs method), preserves upstream-path validation for cached expansions, and keeps the previous `overwrite_expansions` behaviour.
+
+14. Renamed modules and variables
+- Renamed `GROQ_API_KEY` to `API_KEY` to ensure accurate label when later using the Mistral model.
+- Renamed `llm_qe` to `expand`.
+- Renamed `retrieval` to `retrieve`.
+- Renamed `eval` to `evaluate`.
+
+15. Improved notebook hierarchy to ensure better visibility
+- Moved evaluation notebooks to `notebook/`, along with the test notebook.
+
+16. Removed redundant `test/` directory
+- Migrated all useful tests inside `notebook/test.ipynb`
 
 ---
 
@@ -77,12 +94,11 @@ TODO:
   - Catch `FileNotFoundError` and `json.JSONDecodeError` from `load_ingested_dataset(...)`.
   - Automatically re-run `ingest_dataset(dataset)` and retry loading once.
   - Mark `needs_tokenization = True` after re-ingest and restored the tokenization block.
-- Result: `ensure_baseline_runs()` self-heals on corrupt ingest artifacts and proceeds with tokenization and baseline runs.
 
 3. Fixed merge conflicts in git history
 - Resolved merge conflicts that occurred during recent feature branch merges.
 - Cleaned up unnecessary merge commits and rebased branches for a cleaner history.
 - Manually reimplemented stop-word removal logic to ensure consistency across datasets.
 
-4. Renamed API key environment variable
-- Renamed `GROQ_API_KEY` to `API_KEY` to ensure accurate label when later using the Mistral model.
+4. Removed unused runner wrappers
+- Removed deprecated wrappers (`run_baseline`, `run_method`) after migrating callers to `ensure_runs`.

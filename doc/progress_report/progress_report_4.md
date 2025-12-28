@@ -1,11 +1,11 @@
 # Progress Report 4
 
-## Ahmed Badis Lakrach - Evaluation
+## Ahmed Badis Lakrach
 
-# Progress Report — Ingest, Notebooks, Evaluation, Major Directory Refactoring and Misc Fixes
+### Progress Report — Ingest, Notebooks, Evaluation, Major Directory Refactoring and Misc Fixes
 
 
-## Completed Tasks (1–27)
+### Completed Tasks (1–27)
 
 1. **Added programmatic ingest API**  
 - Added `src/ingest/api.py` with `prepare()`, `download(dataset_name)`, and `ingest(dataset_name)`.  
@@ -113,7 +113,7 @@
 - Implemented optimized check order: retrieval run → tokenized index → ingested artifacts → extracted dataset → downloaded archive → remote fetch
 - Function now checks most processed artifacts first and only goes back to earlier stages if needed
 - Added freshness checks: re-processes artifacts if upstream sources are newer (e.g., re-tokenize if ingest is newer, re-ingest if extract is newer)
-- Automatic indexing: ensures tokenized data exists and uses it for faster BM25 retrieval
+- Automatic indexing: ensures tokenized data exists and uses it for faster retrieval
 - Atomic CSV writes with file locking to prevent concurrent build conflicts
 
 ---
