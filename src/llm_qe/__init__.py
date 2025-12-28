@@ -4,7 +4,7 @@ from .expander import (
     ExpansionStrategy
 )
 from .prompts import (
-    GENERATE_ONLY_PROMPT,
+    APPEND_PROMPT,
     REFORMULATE_PROMPT,
     ANALYZE_GENERATE_REFINE_PROMPT,
     get_prompt_template
@@ -16,7 +16,7 @@ __all__ = [
     'LLMQueryExpander',
     'expand_queries',
     'ExpansionStrategy',
-    'GENERATE_ONLY_PROMPT',
+    'APPEND_PROMPT',
     'REFORMULATE_PROMPT',
     'ANALYZE_GENERATE_REFINE_PROMPT',
     'get_prompt_template'

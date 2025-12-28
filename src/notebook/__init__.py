@@ -13,5 +13,3 @@ __all__ = [
     'run_baseline',
     'run_method',
 ]
-
-

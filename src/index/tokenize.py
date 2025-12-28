@@ -1,13 +1,8 @@
 from __future__ import annotations
-
-import json
 from dataclasses import dataclass, field
 from pathlib import Path
-from typing import Callable, Dict, List, MutableMapping, Optional, Sequence
-
-import nltk
+from typing import Callable, Dict, List, MutableMapping, Optional, Sequence, Set
 from tqdm import tqdm
-
 from ingest.core import (
     DATA_ROOT,
     DEFAULT_NLTK_RESOURCES,
@@ -16,11 +11,16 @@ from ingest.core import (
     get_ingested_dataset_paths,
     ensure_nltk_resources,
 )
+import json
+import nltk
+
 
 DOCS_TOKENIZED_FILENAME = "docs_tokenized.jsonl"
 DEFAULT_TOKENIZATION_FIELDS: Sequence[str] = ("text",)
 Tokenizer = Callable[[str], Sequence[str]]
 INDEX_ROOT = DATA_ROOT / "index"
+STOPWORD_RESOURCES: Sequence[str] = (*DEFAULT_NLTK_RESOURCES, "stopwords")
+_STOP_WORDS: Set[str] = set()
 
 
 @dataclass(frozen=True)
@@ -58,7 +58,7 @@ class TokenizationConfig:
 def ensure_nltk_tokenizer(resources: Sequence[str] | None = None) -> Dict[str, str]:
     if NLTK_DATA_PATH not in nltk.data.path:
         nltk.data.path.append(NLTK_DATA_PATH)
-    targets = resources if resources is not None else DEFAULT_NLTK_RESOURCES
+    targets = resources if resources is not None else STOPWORD_RESOURCES
     return ensure_nltk_resources(targets)
 
 
@@ -68,10 +68,42 @@ def _default_tokenizer(text: str) -> Sequence[str]:
     return nltk.word_tokenize(text)
 
 
-def _tokenize_value(value: str, tokenizer: Tokenizer, lowercase: bool) -> List[str]:
+def _load_stopwords() -> Set[str]:
+    if _STOP_WORDS:
+        return _STOP_WORDS
+    try:
+        from nltk.corpus import stopwords as nltk_stopwords
+
+        _STOP_WORDS.update({w.lower() for w in nltk_stopwords.words("english")})
+    except Exception as exc:  # pragma: no cover - optional dependency
+        print(f"Warning: stopword list unavailable ({exc}); proceeding without stopword filtering.")
+    return _STOP_WORDS
+
+
+def _tokenize_value(
+    value: str,
+    tokenizer: Tokenizer,
+    lowercase: bool,
+    stop_words: Optional[Set[str]] = None,
+    removed_counter: Optional[List[int]] = None,
+) -> List[str]:
     tokens = list(tokenizer(value or ""))
+    lowered_tokens = [token.lower() for token in tokens]
     if lowercase:
-        tokens = [token.lower() for token in tokens]
+        tokens = lowered_tokens
+
+    if stop_words:
+        filtered: List[str] = []
+        removed = 0
+        for raw, low in zip(tokens, lowered_tokens):
+            if low in stop_words:
+                removed += 1
+                continue
+            filtered.append(low if lowercase else raw)
+        if removed_counter is not None:
+            removed_counter[0] += removed
+        tokens = filtered
+
     return tokens
 
 
@@ -103,6 +135,8 @@ def _tokenize_with_config(config: TokenizationConfig) -> TokenizationReport:
     if config.ensure_nltk:
         ensure_nltk_tokenizer()
     tokenizer = config.tokenizer or _default_tokenizer
+    stop_words = _load_stopwords()
+    removed_stopwords = [0]
 
     paths = config.dataset_paths()
     docs_path = paths.docs
@@ -122,9 +156,24 @@ def _tokenize_with_config(config: TokenizationConfig) -> TokenizationReport:
             for field in config.fields:
                 if field in record:
                     value = record.get(field)
-                    record[field] = _tokenize_value(str(value or ""), tokenizer, config.lowercase)
+                    record[field] = _tokenize_value(
+                        str(value or ""),
+                        tokenizer,
+                        config.lowercase,
+                        stop_words=stop_words,
+                        removed_counter=removed_stopwords,
+                    )
             target.write(json.dumps(record) + "\n")
             processed += 1
+
+    if stop_words:
+        print(
+            f"Removed {removed_stopwords[0]} stopwords while tokenizing dataset '{config.dataset}'."
+        )
+    else:
+        print(
+            f"No stopword filtering applied for dataset '{config.dataset}' (stopword list empty)."
+        )
 
     return TokenizationReport(dataset=config.dataset, docs_processed=processed, output_path=output_path)
 

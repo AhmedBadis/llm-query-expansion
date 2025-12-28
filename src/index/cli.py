@@ -1,13 +1,11 @@
 from __future__ import annotations
-
-import argparse
-import json
 from pathlib import Path
 from ingest.cli import DEFAULT_DATASETS as INGEST_DEFAULT_DATASETS
 from ingest.core import INGESTED_ROOT
-
 from . import __version__
 from .tokenize import DOCS_TOKENIZED_FILENAME, tokenize_corpus
+import argparse
+import json
 
 
 def build_parser() -> argparse.ArgumentParser:

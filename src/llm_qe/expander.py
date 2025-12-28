@@ -30,14 +30,14 @@ except ImportError:
     GROQ_AVAILABLE = False
 
 from .prompts import (
-    GENERATE_ONLY_PROMPT,
+    APPEND_PROMPT,
     REFORMULATE_PROMPT,
     ANALYZE_GENERATE_REFINE_PROMPT,
 )
 
 
 class ExpansionStrategy(Enum):
-    GENERATE_ONLY = "generate_only" # TODO: rename to GENERATE_ONLY to APPEND across all files
+    APPEND = "append"
     REFORMULATE = "reformulate"
     ANALYZE_GENERATE_REFINE = "analyze_generate_refine"
 
@@ -52,7 +52,7 @@ class GroqQueryExpander:
         self,
         api_key: Optional[str] = None,
         model_name: str = "llama-3.1-8b-instant",
-        strategy: ExpansionStrategy = ExpansionStrategy.GENERATE_ONLY,
+        strategy: ExpansionStrategy = ExpansionStrategy.APPEND,
         max_tokens: int = 50,
         temperature: float = 0.7,
     ):
@@ -80,8 +80,8 @@ class GroqQueryExpander:
         print(f"Strategy: {strategy.value}")
     
     def _get_default_prompt(self) -> str:
-        if self.strategy == ExpansionStrategy.GENERATE_ONLY:
-            return GENERATE_ONLY_PROMPT
+        if self.strategy == ExpansionStrategy.APPEND:
+            return APPEND_PROMPT
         elif self.strategy == ExpansionStrategy.REFORMULATE:
             return REFORMULATE_PROMPT
         elif self.strategy == ExpansionStrategy.ANALYZE_GENERATE_REFINE:
@@ -116,7 +116,7 @@ class GroqQueryExpander:
         prompt = self.prompt_template.format(query=query)
         response = self._generate_response(prompt)
         
-        if self.strategy == ExpansionStrategy.GENERATE_ONLY:
+        if self.strategy == ExpansionStrategy.APPEND:
             return f"{query} {response}".strip()
         
         elif self.strategy == ExpansionStrategy.REFORMULATE:
@@ -142,7 +142,7 @@ class GroqQueryExpander:
                 expanded = self.expand_query(query_text)
                 expanded_queries[qid] = expanded
             except Exception as e:
-                print(f"❌ Error expanding query {qid}: {e}")
+                print(f"Error expanding query {qid}: {e}")
                 expanded_queries[qid] = query_text
         
         return expanded_queries
@@ -165,7 +165,7 @@ class LLMQueryExpander:
     def __init__(
         self,
         model_name: str = "microsoft/Phi-3-mini-4k-instruct",
-        strategy: ExpansionStrategy = ExpansionStrategy.GENERATE_ONLY,
+        strategy: ExpansionStrategy = ExpansionStrategy.APPEND,
         device: str = "auto",
         max_new_tokens: int = 50,
         temperature: float = 0.7,
@@ -219,11 +219,11 @@ class LLMQueryExpander:
         else:
             self.prompt_template = self._get_default_prompt()
         
-        print(f"✅ Model loaded. Strategy: {strategy.value}")
+        print(f"Model loaded. Strategy: {strategy.value}")
     
     def _get_default_prompt(self) -> str:
-        if self.strategy == ExpansionStrategy.GENERATE_ONLY:
-            return GENERATE_ONLY_PROMPT
+        if self.strategy == ExpansionStrategy.APPEND:
+            return APPEND_PROMPT
         elif self.strategy == ExpansionStrategy.REFORMULATE:
             return REFORMULATE_PROMPT
         elif self.strategy == ExpansionStrategy.ANALYZE_GENERATE_REFINE:
@@ -266,7 +266,7 @@ class LLMQueryExpander:
         prompt = self.prompt_template.format(query=query)
         response = self._generate_response(prompt)
         
-        if self.strategy == ExpansionStrategy.GENERATE_ONLY:
+        if self.strategy == ExpansionStrategy.APPEND:
             return f"{query} {response}".strip()
         
         elif self.strategy == ExpansionStrategy.REFORMULATE:
@@ -292,7 +292,7 @@ class LLMQueryExpander:
                 expanded = self.expand_query(query_text)
                 expanded_queries[qid] = expanded
             except Exception as e:
-                print(f"❌ Error expanding query {qid}: {e}")
+                print(f"Error expanding query {qid}: {e}")
                 expanded_queries[qid] = query_text
         
         return expanded_queries
@@ -314,7 +314,7 @@ def expand_queries_groq(
     queries: Dict[str, str],
     api_key: Optional[str] = None,
     model_name: str = "llama-3.1-8b-instant",
-    strategy: str = "generate_only",
+    strategy: str = "append",
     **kwargs
 ) -> Dict[str, str]:
     """Convenience function for Groq API expansion"""
@@ -333,7 +333,7 @@ def expand_queries_groq(
 def expand_queries(
     queries: Dict[str, str],
     model_name: str = "microsoft/Phi-3-mini-4k-instruct",
-    strategy: str = "generate_only",
+    strategy: str = "append",
     **kwargs
 ) -> Dict[str, str]:
     """Convenience function for local model expansion"""

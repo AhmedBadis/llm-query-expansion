@@ -29,4 +29,3 @@ ssh_pull.py
 
 # API keys & environment variables
 .env
-.env.local

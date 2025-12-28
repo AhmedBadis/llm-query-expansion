@@ -2,7 +2,7 @@ description: "Query Expansion Prompt Testing"
 
 # Load prompts from separate files
 prompts:
-  - file://generate_only.txt
+  - file://append.txt
   - file://reformulate.txt
   - file://analyze_generate_refine.txt
 

@@ -252,9 +252,9 @@ def ensure_baseline_runs(
             print(f"[{dataset}] No local archive found. Downloading from remote...")
             result = ingest_download(dataset)
             if result:
-                print(f"✓ Downloaded {dataset}")
+                print(f"Downloaded {dataset}")
             else:
-                print(f"✗ Failed to download {dataset}")
+                print(f"Failed to download {dataset}")
                 continue
 
         # Order 5: Extract (if needed)
@@ -267,7 +267,7 @@ def ensure_baseline_runs(
             # download_beir_dataset will skip download if zip exists, but will extract
             result = download_beir_dataset(dataset, DOWNLOAD_ROOT)
             if result:
-                print(f"✓ Extracted {dataset}")
+                print(f"Extracted {dataset}")
         elif needs_extraction and not has_downloaded:
             # Download will handle extraction, so this case is covered by download step
             pass
@@ -277,9 +277,9 @@ def ensure_baseline_runs(
             print(f"[{dataset}] Ingesting dataset...")
             try:
                 ingest_dataset(dataset)
-                print(f"✓ Ingested {dataset}")
+                print(f"Ingested {dataset}")
             except Exception as e:
-                print(f"✗ Failed to ingest {dataset}: {e}")
+                print(f"Failed to ingest {dataset}: {e}")
                 continue
 
         # Load ingested corpus
@@ -293,13 +293,13 @@ def ensure_baseline_runs(
             try:
                 ingest_dataset(dataset)
             except Exception as ingest_exc:
-                print(f"✗ Failed to re-ingest {dataset}: {ingest_exc}")
+                print(f"Failed to re-ingest {dataset}: {ingest_exc}")
                 continue
 
             try:
                 corpus, queries, _ = load_ingested_dataset(dataset, ingested_root=INGESTED_ROOT)
             except Exception as retry_exc:
-                print(f"✗ Failed to load ingested dataset '{dataset}' after re-ingest: {retry_exc}")
+                print(f"Failed to load ingested dataset '{dataset}' after re-ingest: {retry_exc}")
                 continue
 
             # Ingest artifacts changed; tokenized index is now stale.
@@ -310,7 +310,7 @@ def ensure_baseline_runs(
             print(f"[{dataset}] Tokenizing corpus...")
             try:
                 report = tokenize_corpus(dataset)
-                print(f"✓ Tokenized {report.docs_processed} documents for {dataset}")
+                print(f"Tokenized {report.docs_processed} documents for {dataset}")
                 has_tokenized = True
             except Exception as e:
                 print(

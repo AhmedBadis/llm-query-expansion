@@ -24,7 +24,7 @@ for strategy in ExpansionStrategy:
     
     expander = GroqQueryExpander(
         api_key=API_KEY,
-        model_name="llama-3.1-8b-instant",  # Fast and good
+        model_name="llama-3.1-8b-instant",
         strategy=strategy,
         max_tokens=50,
         temperature=0.7

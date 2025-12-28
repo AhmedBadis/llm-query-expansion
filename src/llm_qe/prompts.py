@@ -2,8 +2,8 @@
 Prompt templates for LLM query expansion strategies.
 """
 
-# STRATEGY 1: GENERATE-ONLY (APPEND) - Working great, minor tweak
-GENERATE_ONLY_PROMPT = """Generate search expansion terms for this query.
+# STRATEGY 1: APPEND - Working great, minor tweak
+APPEND_PROMPT = """Generate search expansion terms for this query.
 
 Query: {query}
 
@@ -49,7 +49,7 @@ Now do it for the query above:"""
 
 
 PROMPT_TEMPLATES = {
-    'generate_only': GENERATE_ONLY_PROMPT,
+    'append': APPEND_PROMPT,
     'reformulate': REFORMULATE_PROMPT,
     'analyze_generate_refine': ANALYZE_GENERATE_REFINE_PROMPT,
 }

@@ -87,7 +87,7 @@ def main():
     parser = argparse.ArgumentParser(description="LLM query expansion")
     parser.add_argument("--dataset", type=str, default="trec_covid")
     parser.add_argument("--model", type=str, default="mistralai/Mistral-7B-Instruct-v0.2")
-    parser.add_argument("--strategy", type=str, choices=["generate_only", "reformulate", "analyze_generate_refine"], default="generate_only")
+    parser.add_argument("--strategy", type=str, choices=["append", "reformulate", "analyze_generate_refine"], default="append")
     parser.add_argument("--output-dir", type=str, default="./expanded_queries")
     parser.add_argument("--max-queries", type=int, default=None)
     parser.add_argument("--baseline-only", action="store_true")
@@ -101,7 +101,7 @@ def main():
         return
     
     if args.all_strategies:
-        strategies = ["generate_only", "reformulate", "analyze_generate_refine"]
+        strategies = ["append", "reformulate", "analyze_generate_refine"]
         save_baseline_queries(args.dataset, args.output_dir)
         for strategy in strategies:
             expand_queries_for_dataset(args.dataset, args.model, strategy, args.output_dir, args.max_queries, args.cache_dir)
