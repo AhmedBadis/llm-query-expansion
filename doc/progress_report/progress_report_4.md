@@ -127,7 +127,7 @@
 - Fixed broken regex pattern in `list_remote_datasets()` in `src/ingest/beir_loader.py`.
 
 3. **API Key**  
-- Groq API key now read from `.env` file (git-ignored) using `python-dotenv`. `expander.py` updated to read from `.env` file (GROQ_API_KEY), environment variable, or parameter.
+- Groq API key now read from `.env` file (git-ignored) using `python-dotenv`. `expander.py` updated to read from `.env` file (GOQ_API_KEY), environment variable, or parameter.
 
 4. **index/**
 - Fixed relative import issues in `src/index/tokenize.py` and `src/index/cli.py` (changed to absolute imports)

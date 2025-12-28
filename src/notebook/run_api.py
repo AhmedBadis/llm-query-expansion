@@ -74,7 +74,7 @@ def _latest_mtime(path: Path) -> float:
 
 import csv
 
-def _is_run_valid(run_path: Path, dataset: str) -> bool:
+def _is_run_valid(run_path: Path, dataset: str, *, upstream_paths: Optional[list[Path]] = None) -> bool:
     """
     Validate run by comparing its mtime against upstream artifacts (ingest + index).
     Also perform a quick CSV sanity check (header + at least one data row).
@@ -89,6 +89,9 @@ def _is_run_valid(run_path: Path, dataset: str) -> bool:
         index_dir = DATA_ROOT / "index" / dataset
 
         upstream_latest = max(_latest_mtime(ingest_dir), _latest_mtime(index_dir))
+        if upstream_paths:
+            for extra in upstream_paths:
+                upstream_latest = max(upstream_latest, _latest_mtime(extra))
         # If run is older than any upstream artifact, it's stale.
         if run_mtime < upstream_latest:
             return False
@@ -380,6 +383,164 @@ def ensure_baseline_runs(
 
     return runs
 
+def _method_run_path(dataset: str, method: str, retrieval: str) -> Path:
+    return DATA_ROOT / "retrieval" / method / f"{dataset}_{retrieval}.csv"
+
+def _expansion_cache_path(dataset: str, method: str) -> Path:
+    return DATA_ROOT / "expansion" / method / f"{dataset}.json"
+
+def ensure_method_runs(
+     *,
+     method_name: str,
+     strategy: str,
+     expander: Optional[object] = None,
+     datasets: Optional[list[str]] = None,
+     retrieval_methods: Optional[list[str]] = None,
+     top_k: int = 100,
+     max_queries: Optional[int] = None,
+     groq_model_name: str = "llama-3.1-8b-instant",
+     api_key: Optional[str] = None,
+     overwrite_expansions: bool = False,
+) -> Dict[str, Dict[str, Path]]:
+    from ingest.core import load_ingested_dataset
+
+    try:
+        from llm_qe.expander import GroqQueryExpander, ExpansionStrategy
+    except Exception as exc:
+        raise ImportError(
+            "GroqQueryExpander is required for method notebooks. "
+            "Ensure dependencies are installed and API_KEY is set."
+        ) from exc
+
+    if not isinstance(strategy, ExpansionStrategy):
+        raise TypeError("strategy must be an ExpansionStrategy")
+
+    datasets = datasets or ["trec_covid", "climate_fever"]
+    retrieval_methods = retrieval_methods or ["bm25", "tfidf"]
+
+    ingest_prepare(ensure_dirs=True, ensure_nltk=True)
+
+    # Ensure baseline runs exist for fair comparison and to guarantee ingest + index artifacts.
+    ensure_baseline_runs(datasets=datasets, retrieval_methods=retrieval_methods, top_k=top_k)
+
+    runs: Dict[str, Dict[str, Path]] = {}
+
+    for dataset in datasets:
+        print(f"=== Dataset: {dataset} ===")
+        runs[dataset] = {}
+
+        try:
+            corpus, queries, _ = load_ingested_dataset(dataset, ingested_root=INGESTED_ROOT)
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            print(
+                f"[{dataset}] Ingested artifacts appear missing or corrupted ({e}). "
+                "Re-ingesting and retrying..."
+            )
+            try:
+                ingest_dataset(dataset)
+            except Exception as e:
+                print(f"Failed to ingest {dataset}: {e}")
+                continue
+
+            try:
+                corpus, queries, _ = load_ingested_dataset(dataset, ingested_root=INGESTED_ROOT)
+            except (FileNotFoundError, json.JSONDecodeError) as e:
+                print(
+                    f"[{dataset}] Ingested artifacts appear missing or corrupted ({e}). "
+                    "Re-ingesting and retrying..."
+                )
+                ingest_dataset(dataset)
+                corpus, queries, _ = load_ingested_dataset(dataset, ingested_root=INGESTED_ROOT)
+
+        # Try to load tokenized docs (for faster BM25 / consistent with baseline flow)
+        try:
+            tokenized_corpus = load_tokenized_corpus(dataset)
+            for doc_id, doc_data in corpus.items():
+                if doc_id in tokenized_corpus:
+                    tokens = tokenized_corpus[doc_id].get("text")
+                    if isinstance(tokens, list):
+                        doc_data["tokens"] = [str(token) for token in tokens if str(token)]
+            print("Loaded pre-tokenized data for faster BM25 retrieval")
+        except Exception as e:
+            print(f"Warning: Could not load tokenized data: {e}. Using on-the-fly tokenization.")
+
+        if max_queries is not None:
+            qids = sorted(list(queries.keys()))[: max_queries]
+            queries = {qid: queries[qid] for qid in qids}
+
+        cache_path = _expansion_cache_path(dataset, method_name)
+        _ensure_dirs(cache_path.parent)
+
+        expanded_queries: Dict[str, str]
+        if cache_path.exists() and not overwrite_expansions:
+            expanded_queries = json.loads(cache_path.read_text(encoding="utf-8"))
+        else:
+            created_expander = False
+            active_expander = expander
+            if active_expander is None:
+                active_expander = GroqQueryExpander(
+                    api_key=api_key,
+                    model_name=groq_model_name,
+                    strategy=strategy,
+                )
+                created_expander = True
+
+            try:
+                expanded_queries = active_expander.expand_queries(queries, show_progress=True)
+            finally:
+                if created_expander:
+                    active_expander.cleanup()
+
+            cache_path.write_text(
+                json.dumps(expanded_queries, indent=2, ensure_ascii=False),
+                encoding="utf-8",
+            )
+
+        for retrieval in retrieval_methods:
+            run_path = _method_run_path(dataset, method_name, retrieval)
+            _ensure_dirs(run_path.parent)
+
+            if run_path.exists() and _is_run_valid(run_path, dataset, upstream_paths=[cache_path]):
+                print(f"[{dataset} / {retrieval}] {method_name} run already exists and is valid at {run_path}\n")
+                runs[dataset][retrieval] = run_path
+                continue
+
+            lock_path = run_path.with_suffix(run_path.suffix + ".lock")
+            got_lock = False
+            try:
+                fd = os.open(str(lock_path), os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+                os.close(fd)
+                got_lock = True
+            except FileExistsError:
+                print(f"[{dataset} / {retrieval}] Another process is building the run; waiting briefly...")
+                time.sleep(1.0)
+                if run_path.exists() and _is_run_valid(run_path, dataset, upstream_paths=[cache_path]):
+                    print(f"[{dataset} / {retrieval}] Run became available while waiting.")
+                    runs[dataset][retrieval] = run_path
+                    continue
+
+            try:
+                print(f"[{dataset} / {retrieval}] Running {method_name} ({strategy.value}) with {retrieval}...")
+                results = run_retrieval_baseline(corpus, expanded_queries, retrieval=retrieval, top_k=top_k)
+
+                def rows():
+                    yield ["qid", "docid", "score"]
+                    for qid, scored_docs in results.items():
+                        for doc_id, score in scored_docs.items():
+                            yield [qid, doc_id, float(score)]
+
+                _atomic_write_csv(run_path, rows())
+                print(f"[{dataset} / {retrieval}] Saved {method_name} run to {run_path}")
+                runs[dataset][retrieval] = run_path
+            finally:
+                if got_lock and lock_path.exists():
+                    try:
+                        lock_path.unlink()
+                    except OSError:
+                        pass
+
+    return runs
+
 def run_baseline(
     dataset: str,
     retrieval: str = "bm25",
@@ -391,7 +552,6 @@ def run_baseline(
     runs = ensure_baseline_runs(datasets=[dataset], retrieval_methods=[retrieval], top_k=top_k)
     return runs.get(dataset, {}).get(retrieval)
 
-
 def run_method(method_name: str, dataset: str, retrieval: str = "bm25") -> bool:
     """
     Placeholder for future method orchestration (append/reformulate/agr).
@@ -399,16 +559,29 @@ def run_method(method_name: str, dataset: str, retrieval: str = "bm25") -> bool:
     For now, this function simply reports that method orchestration should be
     implemented here and returns False.
     """
-    print(
-        f"[run_method] Method orchestration for '{method_name}' on "
-        f"dataset='{dataset}', retrieval='{retrieval}' is not yet implemented."
-    )
-    return False
+    from llm_qe.expander import ExpansionStrategy
 
+    strategy_map = {
+        "append": ExpansionStrategy.APPEND,
+        "reformulate": ExpansionStrategy.REFORMULATE,
+        "agr": ExpansionStrategy.AGR,
+    }
+    strategy = strategy_map.get(method_name)
+    if strategy is None:
+        raise ValueError(f"Unknown method '{method_name}'.")
+
+    runs = ensure_method_runs(
+        method_name=method_name,
+        strategy=strategy,
+        datasets=[dataset],
+        retrieval_methods=[retrieval],
+    )
+    return bool(runs.get(dataset, {}).get(retrieval))
 
 __all__ = [
     "baseline_exists",
     "ensure_baseline_runs",
+    "ensure_method_runs",
     "run_baseline",
     "run_method",
 ]
