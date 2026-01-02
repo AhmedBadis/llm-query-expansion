@@ -1,15 +1,15 @@
-Improve this search query in 3 steps.
+Improve this search query.
 
 Query: {{query}}
 
-Respond in EXACTLY this format (3 lines only):
-ANALYSIS: [one sentence about the query's intent]
-TERMS: [5 relevant keywords separated by commas]
-REFINED: [single improved query combining original + best terms]
+Output exactly 3 lines:
+ANALYSIS: [one sentence]
+TERMS: [5 keywords separated by commas]
+REFINED: [single improved query, no quotes, no OR, just words]
 
-Example for "climate change":
-ANALYSIS: User wants information about global warming and its effects.
-TERMS: global warming, greenhouse gases, carbon emissions, environmental impact, climate science
-REFINED: climate change global warming environmental impact greenhouse gas emissions
+Example:
+ANALYSIS: User wants climate information.
+TERMS: global warming, emissions, temperature, weather, environment
+REFINED: climate change global warming emissions environmental impact
 
-Now do it for the query above:
+Now output exactly 3 lines for the query above. No alternatives. No quotes. No OR. Just one REFINED query:

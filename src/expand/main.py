@@ -11,7 +11,7 @@ from pathlib import Path
 project_dir = Path(__file__).resolve().parents[3]
 sys.path.insert(0, str(project_dir / "src"))
 
-from expand import LLMQueryExpander, ExpansionStrategy
+from expand import TogetherQueryExpander, ExpansionStrategy
 from ingest import load_dataset
 from ingest.utils import set_nltk_path
 
@@ -22,7 +22,7 @@ def save_json(data, path):
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 
-def expand_queries_for_dataset(dataset_name, model_name, strategy, output_dir, max_queries=None, cache_dir=None):
+def expand_queries_for_dataset(dataset_name, model_name, strategy, output_dir, api_key, max_queries=None):
     set_nltk_path()
     os.makedirs(output_dir, exist_ok=True)
     
@@ -37,37 +37,32 @@ def expand_queries_for_dataset(dataset_name, model_name, strategy, output_dir, m
     print(f"Model: {model_name}, Strategy: {strategy}")
     
     strategy_enum = ExpansionStrategy(strategy)
-    expander = LLMQueryExpander(
+    expander = TogetherQueryExpander(
+        api_key=api_key,
         model_name=model_name,
         strategy=strategy_enum,
-        device="auto",
-        max_new_tokens=100,
+        max_tokens=100,
         temperature=0.7,
-        cache_dir=cache_dir
     )
     
-    try:
-        print("\nExpanding queries...")
-        expanded_queries = expander.expand_queries(queries, show_progress=True)
-        
-        queries_file = os.path.join(output_dir, f"{dataset_name}_{strategy}_expanded_queries.json")
-        save_json(expanded_queries, queries_file)
-        
-        original_file = os.path.join(output_dir, f"{dataset_name}_original_queries.json")
-        save_json(queries, original_file)
-        
-        print("\nExample expansions:")
-        for i, (qid, original) in enumerate(list(queries.items())[:3]):
-            expanded = expanded_queries[qid]
-            print(f"\n[{i+1}] {qid}")
-            print(f"  Original: {original}")
-            print(f"  Expanded: {expanded}")
-        
-        print(f"\nSaved to {queries_file}")
-        return expanded_queries
-        
-    finally:
-        expander.cleanup()
+    print("\nExpanding queries...")
+    expanded_queries = expander.expand_queries(queries, show_progress=True)
+    
+    queries_file = os.path.join(output_dir, f"{dataset_name}_{strategy}_expanded_queries.json")
+    save_json(expanded_queries, queries_file)
+    
+    original_file = os.path.join(output_dir, f"{dataset_name}_original_queries.json")
+    save_json(queries, original_file)
+    
+    print("\nExample expansions:")
+    for i, (qid, original) in enumerate(list(queries.items())[:3]):
+        expanded = expanded_queries[qid]
+        print(f"\n[{i+1}] {qid}")
+        print(f"  Original: {original}")
+        print(f"  Expanded: {expanded}")
+    
+    print(f"\nSaved to {queries_file}")
+    return expanded_queries
 
 
 def save_baseline_queries(dataset_name, output_dir):
@@ -86,15 +81,20 @@ def save_baseline_queries(dataset_name, output_dir):
 def main():
     parser = argparse.ArgumentParser(description="LLM query expansion")
     parser.add_argument("--dataset", type=str, default="trec_covid")
-    parser.add_argument("--model", type=str, default="mistralai/Mistral-7B-Instruct-v0.2")
+    parser.add_argument("--model", type=str, default="mistralai/Mistral-7B-Instruct-v0.3")
     parser.add_argument("--strategy", type=str, choices=["append", "reformulate", "analyze_generate_refine"], default="append")
     parser.add_argument("--output-dir", type=str, default="./expanded_queries")
     parser.add_argument("--max-queries", type=int, default=None)
     parser.add_argument("--baseline-only", action="store_true")
     parser.add_argument("--all-strategies", action="store_true")
-    parser.add_argument("--cache-dir", type=str, default=None)
+    parser.add_argument("--api-key", type=str, default=None, help="Together AI API key")
     
     args = parser.parse_args()
+    
+    # Get API key from args or environment
+    api_key = args.api_key or os.getenv("TOGETHER_API_KEY")
+    if not api_key and not args.baseline_only:
+        raise ValueError("API key required. Use --api-key or set TOGETHER_API_KEY env var.")
     
     if args.baseline_only:
         save_baseline_queries(args.dataset, args.output_dir)
@@ -104,9 +104,9 @@ def main():
         strategies = ["append", "reformulate", "analyze_generate_refine"]
         save_baseline_queries(args.dataset, args.output_dir)
         for strategy in strategies:
-            expand_queries_for_dataset(args.dataset, args.model, strategy, args.output_dir, args.max_queries, args.cache_dir)
+            expand_queries_for_dataset(args.dataset, args.model, strategy, args.output_dir, api_key, args.max_queries)
     else:
-        expand_queries_for_dataset(args.dataset, args.model, args.strategy, args.output_dir, args.max_queries, args.cache_dir)
+        expand_queries_for_dataset(args.dataset, args.model, args.strategy, args.output_dir, api_key, args.max_queries)
 
 
 if __name__ == "__main__":
