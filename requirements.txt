@@ -28,11 +28,7 @@ jupyter>=1.0.0
 ipykernel>=6.0.0
 
 #llm
-transformers>=4.35.0
-torch>=2.0.0
-accelerate>=0.24.0
-sentencepiece>=0.1.99
-groq
+together
 
 pyyaml>=6.0
 
