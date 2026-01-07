@@ -10,7 +10,7 @@ seaborn>=0.11.0
 # Testing
 pytest>=7.0.0
 
-# Data loading (BEIR)
+# Data loading
 beir>=1.0.0
 
 # Retrieval
@@ -23,13 +23,9 @@ requests>=2.31.0
 # Environment variables
 python-dotenv>=1.0.0
 
-# Optional: Jupyter for notebooks
+# Jupyter for notebooks
 jupyter>=1.0.0
 ipykernel>=6.0.0
 
 #llm
 together
-
-pyyaml>=6.0
-
-promptfoo>=1.0.0

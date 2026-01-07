@@ -50,14 +50,14 @@ Run `python -m src.ingest --help` to see all available commands.
 
 To run the pipeline using a certain method, run all cells at one of:
 
-- [runner/evaluate/baseline.ipynb](runner/evaluate/baseline.ipynb)
-- [runner/evaluate/append.ipynb](runner/evaluate/baseline.ipynb)
-- [runner/evaluate/reformulate.ipynb](runner/evaluate/reformulate.ipynb)
-- [runner/evaluate/agr.ipynb](runner/evaluate/agr.ipynb)
+- [notebook/baseline.ipynb](notebook/baseline.ipynb)
+- [notebook/append.ipynb](notebook/baseline.ipynb)
+- [notebook/reformulate.ipynb](notebook/reformulate.ipynb)
+- [notebook/agr.ipynb](notebook/agr.ipynb)
 
 ## Testing
 
-For testing commands and evaluation scripts, run all cells at [runner/test.ipynb](runner/test.ipynb).
+For testing commands and evaluation scripts, run all cells at [notebook/test.ipynb](notebook/test.ipynb).
 
 ### Deactivate virtual environment
 
@@ -68,4 +68,3 @@ deactivate  # Linux/macOS & Windows (Git Bash)
 ## Documentation & Patch Notes
 
 - [doc/progress_report](doc/progress_report) - Progress reports
-- #TODO: Generate official documentation for all methods/files.

@@ -35,7 +35,7 @@ class TogetherQueryExpander:
     Query expander using Together AI API (Mistral 7B)
     
     Get your API key at: https://api.together.ai
-    Set TOGETHER_API_KEY in your .env file
+    Set API_KEY in your .env file
     """
 
     def __init__(
@@ -48,10 +48,10 @@ class TogetherQueryExpander:
         if not TOGETHER_AVAILABLE:
             raise ImportError("together library required. Install with: pip install together")
 
-        self.api_key = os.getenv("TOGETHER_API_KEY")
+        self.api_key = os.getenv("API_KEY")
 
         if not self.api_key:
-            raise ValueError("TOGETHER_API_KEY not found in .env file.")
+            raise ValueError("API_KEY not found in .env file.")
 
         self.client = Together(api_key=self.api_key)
         self.model_name = model_name
@@ -61,7 +61,7 @@ class TogetherQueryExpander:
 
         self.prompt_template = self._get_default_prompt()
 
-        print(f"Together AI client ready. Model: {model_name}")
+        print(f"\nTogether AI client ready. Model: {model_name}")
         print(f"Strategy: {strategy.value}")
     
     def _get_default_prompt(self) -> str:

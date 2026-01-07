@@ -92,9 +92,9 @@ def main():
     args = parser.parse_args()
     
     # Get API key from args or environment
-    api_key = args.api_key or os.getenv("TOGETHER_API_KEY")
+    api_key = args.api_key or os.getenv("API_KEY")
     if not api_key and not args.baseline_only:
-        raise ValueError("API key required. Use --api-key or set TOGETHER_API_KEY env var.")
+        raise ValueError("API key required. Use --api-key or set API_KEY env var.")
     
     if args.baseline_only:
         save_baseline_queries(args.dataset, args.output_dir)

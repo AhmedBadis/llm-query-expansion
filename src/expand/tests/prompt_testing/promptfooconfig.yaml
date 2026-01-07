@@ -10,7 +10,7 @@ prompts:
 providers:
   - id: openai:chat:mistralai/Mistral-7B-Instruct-v0.3
     config:
-      apiKey: "{{env.TOGETHER_API_KEY}}"
+      apiKey: "{{env.API_KEY}}"
       apiBaseUrl: https://api.together.xyz/v1
       temperature: 0.7
       max_tokens: 100

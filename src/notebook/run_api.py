@@ -453,7 +453,7 @@ class RunManager:
                 upstream_paths = [cache_path]
 
             if run_path.exists() and _is_run_valid(run_path, self.dataset, upstream_paths=upstream_paths):
-                print(f"[{self.dataset} / {retrieval}] Run already exists and is valid at {run_path}\n")
+                print(f"[{self.dataset} / {retrieval}] Run already exists and is valid at {run_path}")
                 runs[retrieval] = run_path
                 continue
 
