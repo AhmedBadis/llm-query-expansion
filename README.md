@@ -16,7 +16,7 @@ git clone git@gitlab.informatik.uni-bonn.de:lab-information-retrieval/domain-spe
 cd domain-specific-query-expansion-with-llms
 ```
 
-### 2. Create and activate virtual environment
+### 2. Create and activate a virtual environment
 
 ```bash
 # Create
@@ -28,25 +28,13 @@ source .venv/bin/activate  # Linux/macOS
 source .venv/Scripts/activate  # Windows (Git Bash)
 ```
 
-### 3. Install dependencies
+### 3. Install the dependencies
 
 ```bash
 pip install -r requirements.txt
 ```
 
-## Data & Ingestion
-
-Use the ingest CLI to prepare the workspace, download datasets, and materialize the ingested format:
-
-```bash
-python -m src.ingest prepare                   # creates folders and downloads NLTK assets
-python -m src.ingest download --dataset trec_covid
-python -m src.ingest ingest --dataset trec_covid
-```
-
-Run `python -m src.ingest --help` to see all available commands.
-
-## How to run?
+## 4. Run the pipeline
 
 To run the pipeline using a certain method, run all cells at one of:
 
@@ -68,3 +56,15 @@ deactivate  # Linux/macOS & Windows (Git Bash)
 ## Documentation & Patch Notes
 
 - [doc/progress_report](doc/progress_report) - Progress reports
+
+## Data & Ingestion
+
+You can use the ingest CLI to manually troubleshoot the process of preparing the workspace, downloading the datasets, and materializing the ingested format:
+
+```bash
+python -m src.ingest prepare  # creates folders and downloads NLTK assets
+python -m src.ingest download --dataset trec_covid
+python -m src.ingest ingest --dataset trec_covid
+```
+
+Run `python -m src.ingest --help` to see all available commands.

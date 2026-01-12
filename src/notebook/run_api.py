@@ -192,7 +192,7 @@ class MethodQueryPreparer:
         self,
         method_name: str,
         api_key: Optional[str] = None,
-        model_name: str = "llama-3.1-8b-instant",
+        model_name: str = "Mistral-7B-Instruct-v0.3",
         overwrite_cache: bool = False,
         expander: Optional[object] = None,
     ):
@@ -486,7 +486,7 @@ def ensure_runs(
     retrieval_methods: Optional[List[str]] = None,
     top_k: int = 100,
     max_queries: Optional[int] = None,
-    model_name: str = "llama-3.1-8b-instant",
+    model_name: str = "Mistral-7B-Instruct-v0.3",
     api_key: Optional[str] = None,
     overwrite_expansions: bool = False,
 ) -> Dict[str, Dict[str, Path]]:

@@ -3,7 +3,7 @@
 
 ## Ahmed Badis Lakrach
 
-### Completed Tasks (1–16)
+### Completed Tasks (1–17)
 
 1. Added TF-IDF retrieval backend
 - Implemented a TF-IDF baseline retriever with the same output contract as BM25: `Dict[qid, Dict[doc_id, score]]`.
@@ -80,6 +80,9 @@
 16. Removed redundant `test/` directory
 - Migrated all useful tests inside `notebook/test.ipynb`
 
+17. Ran experiments with all 3 expansion methods under `notebook/`
+- Ran the pipeline and saved metrics/plots for `append.ipynb`, `reformulate.ipynb`, and `agr.ipynb`.
+
 ---
 
 ### Bugfixes (1-4)
@@ -102,3 +105,22 @@
 
 4. Removed unused runner wrappers
 - Removed deprecated wrappers (`run_baseline`, `run_method`) after migrating callers to `ensure_runs`.
+
+---
+
+## [Kallel]
+
+_Add your progress here_
+
+---
+
+## [Baffoun]
+
+_Add your progress here_
+
+---
+
+## [Berktug]
+
+_Add your progress here_
+
