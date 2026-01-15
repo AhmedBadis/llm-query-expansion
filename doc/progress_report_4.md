@@ -4,7 +4,6 @@
 
 ### Progress Report — Ingest, Notebooks, Evaluation, Major Directory Refactoring and Misc Fixes
 
-
 ### Completed Tasks (1–27)
 
 1. **Added programmatic ingest API**  

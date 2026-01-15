@@ -1,6 +1,5 @@
 # Progress Report 5
 
-
 ## Ahmed Badis Lakrach
 
 ### Completed Tasks (1–17)
