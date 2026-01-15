@@ -350,6 +350,84 @@ def load_qrels_file(filepath: str) -> Dict[str, Dict[str, int]]:
     return qrels
 
 
+def compute_eps(
+    df,
+    w_ndcg: float = 0.40,
+    w_mrr: float = 0.30,
+    w_map: float = 0.20,
+    w_recall: float = 0.10,
+    group_cols: Tuple[str, str] = ("dataset", "retrieval"),
+):
+    import numpy as np
+    import pandas as pd
+    from typing import Tuple
+
+    required = {"method", "dataset", "retrieval" , "ndcg@10", "mrr", "map", "recall@100"} 
+    missing = required - set(df.columns)
+    if missing:
+        raise ValueError(f"Missing required columns: {sorted(missing)}")
+
+    # Work on a copy
+    df = df.copy()
+
+    # Normalize supplied metric weights so they sum to 1 (defensive)
+    weight_total = float(w_ndcg + w_mrr + w_map + w_recall)
+    if not np.isclose(weight_total, 1.0):
+        w_ndcg = w_ndcg / weight_total
+        w_mrr = w_mrr / weight_total
+        w_map = w_map / weight_total
+        w_recall = w_recall / weight_total
+
+    # Metrics list for convenience
+    metrics = ["ndcg@10", "mrr", "map", "recall@100"]
+
+    # Aggregate/clean to one row per (method, dataset, retrieval) combo:
+    agg_cols = ["method"] + list(group_cols)
+    per_combo = (
+        df
+        .groupby(agg_cols, as_index=False)[metrics]
+        .mean()
+    )
+
+    # Weighted sum for each dataset x retrieval combo
+    per_combo["weighted_sum"] = (
+        per_combo["ndcg@10"] * w_ndcg
+        + per_combo["mrr"] * w_mrr
+        + per_combo["map"] * w_map
+        + per_combo["recall@100"] * w_recall
+    )
+
+    # EPS per method = mean of weighted_sum across combos for that method
+    eps_per_method = (
+        per_combo
+        .groupby("method", as_index=False)["weighted_sum"]
+        .mean()
+        .rename(columns={"weighted_sum": "eps"})
+    )
+
+    # Attach per-combo weighted_sum to original dataframe
+    per_combo_small = per_combo[agg_cols + ["weighted_sum"]]
+    df = df.merge(per_combo_small, on=agg_cols, how="left")
+
+    # Attach eps per method (one value per method)
+    df = df.merge(eps_per_method, on="method", how="left")
+
+    # Ensure numeric types
+    df["weighted_sum"] = df["weighted_sum"].astype(float)
+    df["eps"] = df["eps"].astype(float)
+
+    # Reorder columns so that 'eps' appears immediately to the right of 'weighted_sum'
+    cols = list(df.columns)
+    if "weighted_sum" in cols and "eps" in cols:
+        # remove eps and re-insert after weighted_sum
+        cols.remove("eps")
+        w_idx = cols.index("weighted_sum")
+        cols.insert(w_idx + 1, "eps")
+        df = df[cols]
+
+    return df
+
+
 if __name__ == "__main__":
     """
     Example usage with sample data.

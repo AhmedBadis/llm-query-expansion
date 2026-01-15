@@ -7,7 +7,8 @@ from .metrics import (
     recall_at_k,
     mrr,
     load_run_file,
-    load_qrels_file
+    load_qrels_file,
+    compute_eps
 )
 from .compute_metrics import (
     compute_all_metrics,
@@ -39,6 +40,7 @@ __all__ = [
     'mrr',
     'load_run_file',
     'load_qrels_file',
+    'compute_eps',
     'compute_all_metrics',
     'compute_metrics_from_files',
     'save_metrics_to_csv',

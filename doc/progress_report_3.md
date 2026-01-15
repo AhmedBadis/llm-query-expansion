@@ -19,7 +19,7 @@
 ### Notebook-Based Evaluation Workflow
 
 - **notebook/eval/baseline.ipynb**: Complete baseline evaluation notebook:
-  - Computes metrics for BM25 × TREC-COVID, BM25 × Climate-Fever, TF-IDF × TREC-COVID, TF-IDF × Climate-Fever
+  - Computes metrics for BM25 × TREC-COVID, BM25 × CLIMATE-FEVER, TF-IDF × TREC-COVID, TF-IDF × CLIMATE-FEVER
   - Creates DUMMY files automatically if missing
   - Generates summary tables and nDCG@10 plots
   - Runs robustness analysis (query slices)
