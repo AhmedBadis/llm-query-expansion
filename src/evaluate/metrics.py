@@ -358,6 +358,18 @@ def compute_eps(
     w_recall: float = 0.10,
     group_cols: Tuple[str, str] = ("dataset", "retrieval"),
 ):
+    """
+    Compute an Effectiveness Performance Score (EPS) by aggregating multiple
+    retrieval metrics with user‑specified weights.
+
+    First checks that all required metric columns are present,
+    then normalizes the metric weights so they sum to 1. For each
+    (method, dataset, retrieval) combination, it computes the mean of the
+    underlying metrics and forms a weighted sum using the provided weights.
+    The EPS for a method is the average of these weighted sums across all
+    dataset–retrieval combinations. The function returns the original
+    dataframe augmented with per‑combo weighted scores and per‑method EPS.
+    """
     import numpy as np
     import pandas as pd
     from typing import Tuple
