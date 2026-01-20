@@ -31,7 +31,8 @@ source .venv/Scripts/activate  # Windows (Git Bash)
 ### 3. Install the dependencies
 
 ```bash
-pip install -r requirements.txt
+pip install --upgrade pip
+pip install -r requirements.txt --no-cache-dir
 ```
 
 ## 4. Run the pipeline
