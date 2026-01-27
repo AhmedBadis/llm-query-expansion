@@ -59,23 +59,3 @@ All notebooks follow exact output layout (DUMMY will be removed once real data i
 - **Comprehensive outputs**: Metrics tables, statistical comparisons, plots, and robustness analysis
 
 **Status:** All evaluation infrastructure complete and notebook-ready. Notebooks can run end-to-end with automatic DUMMY file creation.
-
----
-
-## [Kallel]
-
-_Add your progress here_
-
----
-
-## [Baffoun]
-
-_Add your progress here_
-
----
-
-## [Berktug]
-
-_Add your progress here_
-
-

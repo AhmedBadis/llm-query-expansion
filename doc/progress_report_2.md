@@ -7,22 +7,4 @@
 - Visualization notebook: `output/eval/plots.ipynb`
 - Testing guide: `docs/TESTING.md`
 
-**Status:** All evaluation tasks complete. Waiting for baseline runs from Rami Kallel.
-
----
-
-## [Rami Kallel]
-
-_Add your progress here_
-
----
-
-## [Rami Baffoun]
-
-_Add your progress here_
-
----
-
-## [Berktug Kaan Özkan]
-
-_Add your progress here_
+**Status:** All evaluation tasks complete. Awaiting baseline runs from other members.

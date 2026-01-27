@@ -5,15 +5,14 @@
 - Ahmed Badis Lakrach
 - Berktug Kaan Özkan
 - Rami Baffoun
-- Rami Kallel
 
 ## Setup
 
 ### 1. Clone the repository
 
 ```bash
-git clone git@gitlab.informatik.uni-bonn.de:lab-information-retrieval/domain-specific-query-expansion-with-llms.git
-cd domain-specific-query-expansion-with-llms
+git clone git@github.com:AhmedBadis/llm-query-expansion.git
+cd llm-query-expansion
 ```
 
 ### 2. Create and activate a virtual environment
@@ -43,6 +42,10 @@ To run the pipeline using a certain method, run all cells at one of:
 - [notebook/append.ipynb](notebook/baseline.ipynb)
 - [notebook/reformulate.ipynb](notebook/reformulate.ipynb)
 - [notebook/agr.ipynb](notebook/agr.ipynb)
+
+## Summary
+
+For running the summary notebook, run all cells at [notebook/summary.ipynb](notebook/summary.ipynb).
 
 ## Testing
 

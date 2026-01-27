@@ -133,22 +133,3 @@
 
 5. **beir_loader**
 - Fixed download rename issue in `src/ingest/beir_loader.py` (handles existing files gracefully)
-
----
-
-## [Kallel]
-
-_Add your progress here_
-
----
-
-## [Baffoun]
-
-_Add your progress here_
-
----
-
-## [Berktug]
-
-_Add your progress here_
-

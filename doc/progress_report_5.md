@@ -104,22 +104,3 @@
 
 4. Removed unused runner wrappers
 - Removed deprecated wrappers (`run_baseline`, `run_method`) after migrating callers to `ensure_runs`.
-
----
-
-## [Kallel]
-
-_Add your progress here_
-
----
-
-## [Baffoun]
-
-_Add your progress here_
-
----
-
-## [Berktug]
-
-_Add your progress here_
-
