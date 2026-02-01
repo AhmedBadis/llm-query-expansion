@@ -57,9 +57,9 @@ For testing commands and evaluation scripts, run all cells at [notebook/test.ipy
 deactivate  # Linux/macOS & Windows (Git Bash)
 ```
 
-## Documentation & Patch Notes
+## Documentation & Progress Reports
 
-- [doc](doc) - Progress reports
+- [patch_notes](patch_notes) - Patch Notes
 
 ## Data & Ingestion
 
