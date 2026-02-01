@@ -59,7 +59,7 @@ deactivate  # Linux/macOS & Windows (Git Bash)
 
 ## Documentation & Patch Notes
 
-- [doc/progress_report](doc/progress_report) - Progress reports
+- [doc](doc) - Progress reports
 
 ## Data & Ingestion
 
